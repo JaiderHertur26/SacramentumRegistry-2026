@@ -1,0 +1,194 @@
+
+import React, { useState, useEffect } from 'react';
+import DashboardLayout from '@/components/DashboardLayout';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Save, X, Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '@/components/ui/use-toast';
+
+const EditDecreeCorrection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  
+  const id = searchParams.get('id');
+  const sacrament = searchParams.get('sacrament') || 'bautismo';
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+      numeroDecreto: '',
+      fechaDecreto: '',
+      libro: '',
+      folio: '',
+      numero: '',
+      nombres: '',
+      apellidos: '',
+      fechaSacramento: '',
+      errorEncontrado: '',
+      correccionRealizada: '',
+      autoridad: '', 
+      notas: ''
+  });
+
+  useEffect(() => {
+    if (user?.parishId && id) {
+        loadData();
+    }
+  }, [user, id]);
+
+  const loadData = () => {
+    const entityId = user.parishId || user.dioceseId;
+    const storageKey = `decrees_correction_${entityId}`;
+    const allDecrees = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    
+    const decree = allDecrees.find(d => d.id === id);
+    if (decree) {
+        setFormData(decree);
+    } else {
+        toast({ title: "Error", description: "Decreto no encontrado", variant: "destructive" });
+        navigate('/parroquia/decretos/correccion');
+    }
+  };
+
+  const handleChange = (e) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+        const entityId = user.parishId || user.dioceseId;
+        const storageKey = `decrees_correction_${entityId}`;
+        const allDecrees = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
+        const updatedDecrees = allDecrees.map(d => d.id === id ? { ...d, ...formData } : d);
+        localStorage.setItem(storageKey, JSON.stringify(updatedDecrees));
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        toast({
+            title: "Decreto Actualizado",
+            description: "Los cambios han sido guardados exitosamente.",
+            className: "bg-green-50 border-green-200 text-green-900"
+        });
+        
+        navigate('/parroquia/decretos/correccion');
+        
+    } catch (error) {
+        console.error(error);
+        toast({ title: "Error", description: "Error al actualizar", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  const sacramentLabel = sacrament.charAt(0).toUpperCase() + sacrament.slice(1);
+
+  return (
+    <DashboardLayout entityName={user?.parishName || "Parroquia"}>
+        <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 font-serif">Editar Decreto Corrección</h1>
+            <p className="text-gray-600 font-medium text-sm">Editando decreto para {sacramentLabel}.</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-5xl mx-auto p-6 space-y-6">
+              
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-bold text-gray-700 text-sm uppercase mb-3 border-b border-gray-300 pb-2">Datos del Decreto</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número de Decreto</label>
+                          <input type="text" name="numeroDecreto" value={formData.numeroDecreto} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha Decreto</label>
+                          <input type="date" name="fechaDecreto" value={formData.fechaDecreto} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Autoridad</label>
+                          <input type="text" name="autoridad" value={formData.autoridad} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                  </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h3 className="font-bold text-gray-700 text-sm uppercase mb-3 border-b border-gray-300 pb-2">Datos de la Partida</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Libro</label>
+                          <input type="text" name="libro" value={formData.libro} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Folio</label>
+                          <input type="text" name="folio" value={formData.folio} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
+                          <input type="text" name="numero" value={formData.numero} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none" />
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombres</label>
+                          <input type="text" name="nombres" value={formData.nombres} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase" />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos</label>
+                          <input type="text" name="apellidos" value={formData.apellidos} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase" />
+                      </div>
+                  </div>
+              </div>
+
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-yellow-800 text-sm uppercase mb-3 border-b border-yellow-300 pb-2">Detalle de la Corrección</h3>
+                  <div className="space-y-4">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Error Encontrado</label>
+                          <textarea 
+                              name="errorEncontrado"
+                              value={formData.errorEncontrado} 
+                              onChange={handleChange} 
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none h-20 text-sm"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Corrección Realizada</label>
+                          <textarea 
+                              name="correccionRealizada"
+                              value={formData.correccionRealizada} 
+                              onChange={handleChange} 
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none h-20 text-sm"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Notas</label>
+                          <textarea 
+                              name="notas"
+                              value={formData.notas} 
+                              onChange={handleChange} 
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none h-16 text-sm"
+                          />
+                      </div>
+                  </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
+                  <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}>
+                      <X className="w-4 h-4 mr-2" /> Cancelar
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting} className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                      Guardar Cambios
+                  </Button>
+              </div>
+        </form>
+    </DashboardLayout>
+  );
+};
+
+export default EditDecreeCorrection;

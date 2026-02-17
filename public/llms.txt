@@ -1,0 +1,13 @@
+## Pages
+- [Copias de Seguridad - Eclesia Digital](/backup): No description available
+- [Login | Eclesia Digital](/login): Acceso al sistema de gestión
+- [Untitled Page](/baptismdetail): Details for baptism record
+- [Untitled Page](/baptismlist): View and manage all baptism records
+- [Untitled Page](/celebratedbaptismform): Register an already celebrated baptism
+- [Untitled Page](/createparishuser): Create a new parish user account
+- [Untitled Page](/dashboard): No description available
+- [Untitled Page](/import): Import JSON data files into the system
+- [Untitled Page](/maindashboard): Main dashboard for baptism registry management
+- [Untitled Page](/newbaptismform): Register a new baptism with pending status
+- [Untitled Page](/printboleta): No description available
+- [Untitled Page](/publicsearch): No description available
