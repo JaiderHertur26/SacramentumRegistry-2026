@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from './Button';
+import { Button } from './button';
 import { Pencil, Trash2 } from 'lucide-react';
 
 const Table = ({ columns, data, actions, onAction, onEdit, onDelete, onRowClick }) => {
