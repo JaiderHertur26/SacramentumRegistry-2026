@@ -12,6 +12,7 @@ import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
 import { updateBaptismPartidaMarginalNote } from '@/utils/updateBaptismPartidaMarginalNote.js';
 import { logAuthEvent } from '@/utils/authLogger';
 import { ROLE_TYPES } from '@/config/supabaseConfig';
+import { supabase, isSupabaseConfigured } from '@/lib/customSupabaseClient';
 
 // Import Universal Backup Utilities
 import { 
@@ -109,6 +110,31 @@ export const AppDataProvider = ({ children }) => {
   const [matrimonioParameters, setMatrimonioParameters] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [parishNotifications, setParishNotifications] = useState({});
+  const [supabaseConnected, setSupabaseConnected] = useState(Boolean(isSupabaseConfigured()));
+
+  const initSupabaseConnection = async (url, key) => {
+    try {
+      if (url) localStorage.setItem('supabase_url', url);
+      if (key) localStorage.setItem('supabase_key', key);
+
+      if (!supabase || !isSupabaseConfigured()) {
+        setSupabaseConnected(false);
+        return { success: false, message: 'Supabase no está configurado.' };
+      }
+
+      const { error } = await supabase.from('app_state').select('key_name').limit(1);
+      if (error) {
+        setSupabaseConnected(false);
+        return { success: false, message: error.message };
+      }
+
+      setSupabaseConnected(true);
+      return { success: true, message: 'Conexión Supabase activa.' };
+    } catch (err) {
+      setSupabaseConnected(false);
+      return { success: false, message: err?.message || 'No fue posible conectar con Supabase.' };
+    }
+  };
 
   useEffect(() => {
     initializeData();
@@ -1831,6 +1857,8 @@ export const AppDataProvider = ({ children }) => {
         validateUserCredentials,
         saveBaptismParameters, getBaptismParameters,
         saveData,
+        initSupabaseConnection,
+        supabaseConnected,
         iglesias,
         getVicariesByDiocese,
         createParish,
