@@ -59,13 +59,11 @@ export const AuthProvider = ({ children }) => {
      LOGIN
   ========================= */
   const login = (username, password) => {
-    try {
-      console.log('🔐 Intento de login:', username);
+    try {      
 
       const validUser = validateUserCredentials(username, password);
 
-      if (!validUser) {
-        console.warn('❌ Credenciales inválidas');
+      if (!validUser) {        
         return { success: false, error: 'Usuario o contraseña incorrectos' };
       }
 
@@ -82,8 +80,7 @@ export const AuthProvider = ({ children }) => {
         redirectPath: getRedirectPath(sanitizedUser.role)
       };
 
-    } catch (err) {
-      console.error('🔥 Error en login:', err);
+    } catch (err) {      
       return {
         success: false,
         error: err?.message || 'Error durante el inicio de sesión'

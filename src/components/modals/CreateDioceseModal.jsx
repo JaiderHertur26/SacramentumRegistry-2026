@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
@@ -10,15 +9,20 @@ const CreateDioceseModal = ({ isOpen, onClose }) => {
   const { createDiocese } = useAppData();
   const { toast } = useToast();
   const [formData, setFormData] = useState({ name: '', abbreviation: '', bishop: '', city: '', country: '' });
-
-  const handleSubmit = (e) => {
+  
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.bishop || !formData.city) {
         toast({ title: 'Error', description: 'Campos obligatorios faltantes', variant: 'destructive' });
         return;
     }
+    
+    const result = await createDiocese(formData);
+    if (!result?.success) {
+      toast({ title: 'Error', description: result?.message || 'No se pudo guardar en Supabase', variant: 'destructive' });
+      return;
+    }
 
-    createDiocese(formData);
     toast({ title: 'Éxito', description: 'Diócesis creada correctamente.' });
     setFormData({ name: '', abbreviation: '', bishop: '', city: '', country: '' });
     onClose();

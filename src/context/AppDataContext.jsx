@@ -209,17 +209,44 @@ export const AppDataProvider = ({ children }) => {
       return { success: true, data: newChancery };
   };
 
-  const createDiocese = (dioceseData) => {
+  const syncDioceseToSupabase = async (record) => {
+      if (!supabase || !isSupabaseConfigured()) return { success: true };
+
+      const payload = {
+        id: record.id,
+        name: record.name,
+        type: record.type,
+        bishop_name: record.bishop || record.bishop_name || null,
+        address: [record.city, record.country].filter(Boolean).join(', ') || null,
+        phone: record.phone || null,
+        email: record.email || null,
+        website: record.website || null,
+      };
+
+      const { error } = await supabase.from('dioceses').upsert(payload, { onConflict: 'id' });
+      if (error) return { success: false, message: error.message };
+      return { success: true };
+  };
+
+  const createDiocese = async (dioceseData) => {
       const current = JSON.parse(localStorage.getItem('dioceses') || '[]');
       const newDiocese = { ...dioceseData, type: 'diocese', id: generateUUID(), createdAt: new Date().toISOString() };
+      const supabaseResult = await syncDioceseToSupabase(newDiocese);
+      if (!supabaseResult.success) {
+        return { success: false, message: `No se pudo guardar en Supabase: ${supabaseResult.message}` };
+      }
       const updated = [...current, newDiocese];
       saveData('dioceses', updated);
       return { success: true, data: newDiocese };
   };
 
-  const createArchdiocese = (archdioceseData) => {
+  const createArchdiocese = async (archdioceseData) => {
       const current = JSON.parse(localStorage.getItem('dioceses') || '[]');
       const newArchdiocese = { ...archdioceseData, type: 'archdiocese', id: generateUUID(), createdAt: new Date().toISOString() };
+      const supabaseResult = await syncDioceseToSupabase(newArchdiocese);
+      if (!supabaseResult.success) {
+        return { success: false, message: `No se pudo guardar en Supabase: ${supabaseResult.message}` };
+      }
       const updated = [...current, newArchdiocese];
       saveData('dioceses', updated);
       return { success: true, data: newArchdiocese };

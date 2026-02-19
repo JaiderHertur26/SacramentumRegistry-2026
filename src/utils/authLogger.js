@@ -6,7 +6,7 @@ import { ROLE_TYPES } from '@/config/supabaseConfig';
  * Helps in debugging permissions and user context issues.
  */
 export const logAuthEvent = (user, eventType = 'AUTH_EVENT') => {
-  if (!user) return;
+  if (!user || !import.meta.env.DEV) return;
 
   const timestamp = new Date().toLocaleTimeString();
   const role = user.role || 'unknown';
@@ -55,7 +55,7 @@ export const logAuthEvent = (user, eventType = 'AUTH_EVENT') => {
   }
 
   console.log(`%cTimestamp: ${timestamp}`, styles.sub);
-  console.log('%cFull Object:', styles.sub, user);
+  
   
   console.groupEnd();
 };
