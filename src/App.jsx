@@ -64,6 +64,7 @@ import ConfirmationEditPage from '@/pages/parish/ConfirmationEditPage';
 import ConfirmationPartidasPage from '@/pages/parish/ConfirmationPartidasPage';
 import ConfirmationIndexPage from '@/pages/parish/ConfirmationIndexPage';
 import ConfirmationParametersPage from '@/pages/parish/ConfirmationParametersPage';
+import ConfirmationCorrectionListPage from '@/pages/parish/ConfirmationCorrectionListPage';
 
 /* --- MATRIMONIO --- */
 import MatrimonioNewPage from '@/pages/parish/MatrimonioNewPage';
@@ -75,6 +76,7 @@ import MatrimonioPartidasPage from '@/pages/parish/MatrimonioPartidasPage';
 import MarriageIndexPage from '@/pages/parish/MarriageIndexPage';
 import MatrimonioParametersPage from '@/pages/parish/MatrimonioParametersPage';
 import MatrimonioEditPage from '@/pages/parish/MatrimonioEditPage';
+import MatrimonioCorrectionListPage from '@/pages/parish/MatrimonioCorrectionListPage';
 
 /* --- DECREES (Reposición) --- */
 import NewDecreeReplacement from '@/pages/parish/NewDecreeReplacement';
@@ -204,6 +206,7 @@ const AppContent = () => {
                 <Route path="/parroquia/confirmacion/partidas" element={<ProtectedRoute requiredRole="parish"><ConfirmationPartidasPage /></ProtectedRoute>} />
                 <Route path="/parroquia/confirmacion/indice" element={<ProtectedRoute requiredRole="parish"><ConfirmationIndexPage /></ProtectedRoute>} />
                 <Route path="/parroquia/confirmacion/parametros" element={<ProtectedRoute requiredRole="parish"><ConfirmationParametersPage /></ProtectedRoute>} />
+                <Route path="/parroquia/confirmacion/correcciones" element={<ProtectedRoute requiredRole="parish"><ConfirmationCorrectionListPage /></ProtectedRoute>} />
 
                 {/* Matrimonio Routes */}
                 <Route path="/parroquia/matrimonio/nuevo" element={<ProtectedRoute requiredRole="parish"><MatrimonioNewPage /></ProtectedRoute>} />
@@ -216,23 +219,28 @@ const AppContent = () => {
                 <Route path="/parroquia/matrimonio/parametros" element={<ProtectedRoute requiredRole="parish"><MatrimonioParametersPage /></ProtectedRoute>} />
                 <Route path="/parroquia/matrimonio/editar" element={<ProtectedRoute requiredRole="parish"><MatrimonioEditPage /></ProtectedRoute>} />
                 <Route path="/parroquia/matrimonio/notificacion" element={<ProtectedRoute requiredRole="parish"><MatrimonialNotificationPage /></ProtectedRoute>} />
+                <Route path="/parroquia/matrimonio/correcciones" element={<ProtectedRoute requiredRole="parish"><MatrimonioCorrectionListPage /></ProtectedRoute>} />
 
                 {/* Decrees Routes (Updated Structure) */}
-                <Route path="/parish/decree-replacement/new" element={<ProtectedRoute requiredRole="parish"><NewDecreeReplacement /></ProtectedRoute>} />
+                <Route path="/parish/decree-replacement/new" element={<ProtectedRoute requiredRole="parish"><BaptismRepositionNewPage /></ProtectedRoute>} />
                 <Route path="/parish/decree-correction/new" element={<ProtectedRoute requiredRole="parish"><BaptismCorrectionNewPage /></ProtectedRoute>} />
                 
                 {/* NEW REPOSITION ROUTES */}
-                <Route path="/parish/new-decree-reposition" element={<ProtectedRoute requiredRole="parish"><DecreeRepositionNew /></ProtectedRoute>} />
+                <Route path="/parish/new-decree-reposition" element={<ProtectedRoute requiredRole="parish"><BaptismRepositionNewPage /></ProtectedRoute>} />
                 <Route path="/parish/baptism-reposition-new" element={<ProtectedRoute requiredRole="parish"><BaptismRepositionNewPage /></ProtectedRoute>} />
 
                 <Route path="/parish/decree-replacement/view" element={<ProtectedRoute requiredRole="parish"><DecreeReplacementView /></ProtectedRoute>} />
                 <Route path="/parish/decree-correction/view" element={<ProtectedRoute requiredRole="parish"><BaptismCorrectionListPage /></ProtectedRoute>} />
                 
+                {/* Specific views for Confirmation and Marriage corrections */}
+                <Route path="/parish/decree-correction/view/confirmation" element={<ProtectedRoute requiredRole="parish"><ConfirmationCorrectionListPage /></ProtectedRoute>} />
+                <Route path="/parish/decree-correction/view/marriage" element={<ProtectedRoute requiredRole="parish"><MatrimonioCorrectionListPage /></ProtectedRoute>} />
+
                 <Route path="/parish/decree-replacement/edit" element={<ProtectedRoute requiredRole="parish"><EditDecreeReplacementSheet /></ProtectedRoute>} />
                 <Route path="/parish/decree-correction/edit" element={<ProtectedRoute requiredRole="parish"><EditDecreeCorrectionSheet /></ProtectedRoute>} />
                 
-                {/* Legacy Routes Support (Optional - kept for safety if external links exist) */}
-                <Route path="/parroquia/decretos/nuevo-reposicion" element={<ProtectedRoute requiredRole="parish"><NewDecreeReplacement /></ProtectedRoute>} />
+                {/* Legacy Routes Support */}
+                <Route path="/parroquia/decretos/nuevo-reposicion" element={<ProtectedRoute requiredRole="parish"><BaptismRepositionNewPage /></ProtectedRoute>} />
                 <Route path="/parroquia/decretos/reposicion" element={<ProtectedRoute requiredRole="parish"><DecreeReplacementView /></ProtectedRoute>} />
                 <Route path="/parroquia/decretos/editar-reposicion" element={<ProtectedRoute requiredRole="parish"><EditDecreeReplacement /></ProtectedRoute>} />
                 <Route path="/parroquia/decretos/editar-reposicion-hoja" element={<ProtectedRoute requiredRole="parish"><EditDecreeReplacementSheet /></ProtectedRoute>} />

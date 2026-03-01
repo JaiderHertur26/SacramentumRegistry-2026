@@ -5,7 +5,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { Save, X, Loader2, Search, Trash2, FileText, UserPlus, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Save, X, Loader2, Search, Trash2, FileText, UserPlus, AlertCircle, CheckCircle2, Heart } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -22,7 +22,9 @@ const EditDecreeCorrectionSheet = () => {
         updateBaptismCorrection, 
         deleteBaptismCorrection, 
         getBaptisms, 
-        getMisDatosList, 
+        getConfirmations,
+        getMatrimonios,
+        getMisDatosList,
         getParrocoActual,
         getConceptosAnulacion
     } = useAppData();
@@ -36,7 +38,7 @@ const EditDecreeCorrectionSheet = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [conceptos, setConceptos] = useState([]);
 
-    // Section 1: Decree Data
+    // Section 1: Decree Data (Shared state structure, though values change)
     const [decreeData, setDecreeData] = useState({
         parroquia: '',
         decreeNumber: '',
@@ -48,7 +50,7 @@ const EditDecreeCorrectionSheet = () => {
         conceptoAnulacionId: '' 
     });
 
-    // Search Result (Partida Anulada)
+    // Search Result
     const [foundRecord, setFoundRecord] = useState(null);
     const [searchMessage, setSearchMessage] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
@@ -58,22 +60,22 @@ const EditDecreeCorrectionSheet = () => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const wrapperRef = useRef(null);
 
-    // Section 2: New Partida Form
-    const [newPartida, setNewPartida] = useState({
-        sacramentDate: '',
-        firstName: '',
-        lastName: '',
-        birthDate: '',
-        lugarNacimientoDetalle: '',
-        fatherName: '',
-        motherName: '',
-        tipoUnionPadres: '1',
-        sex: '1',
-        paternalGrandparents: '',
-        maternalGrandparents: '',
-        godparents: '',
-        minister: '',
-        ministerFaith: '' 
+    // Section 2: Forms for each sacrament
+    const [newBaptismPartida, setNewBaptismPartida] = useState({
+        sacramentDate: '', firstName: '', lastName: '', birthDate: '', lugarNacimientoDetalle: '',
+        fatherName: '', motherName: '', tipoUnionPadres: '1', sex: '1',
+        paternalGrandparents: '', maternalGrandparents: '', godparents: '', minister: '', ministerFaith: ''
+    });
+
+    const [newConfPartida, setNewConfPartida] = useState({
+        sacramentDate: '', firstName: '', lastName: '', birthDate: '', lugarNacimientoDetalle: '',
+        fatherName: '', motherName: '', padrino: '', madrina: '', minister: '', ministerFaith: ''
+    });
+
+    const [newMarPartida, setNewMarPartida] = useState({
+        sacramentDate: '', husbandName: '', husbandSurname: '', wifeName: '', wifeSurname: '',
+        husbandFather: '', husbandMother: '', wifeFather: '', wifeMother: '',
+        witnesses: '', minister: '', ministerFaith: ''
     });
 
     const [activePriest, setActivePriest] = useState(null);
@@ -82,300 +84,172 @@ const EditDecreeCorrectionSheet = () => {
 
     useEffect(() => {
         if (user?.parishId) {
-            // Load Decrees
-            const allDecrees = getBaptismCorrections(user.parishId);
+            // Load Decrees based on active tab
+            let allDecrees = [];
+            if (activeTab === 'bautizos') allDecrees = getBaptismCorrections(user.parishId);
+            else if (activeTab === 'confirmaciones') allDecrees = JSON.parse(localStorage.getItem(`confirmationCorrections_${user.parishId}`) || '[]');
+            else if (activeTab === 'matrimonios') allDecrees = JSON.parse(localStorage.getItem(`marriageCorrections_${user.parishId}`) || '[]');
+
             setDecrees(allDecrees);
 
-            // Load Concepts (Filter by 'porCorreccion')
-            const allConcepts = getConceptosAnulacion(user.parishId);
-            setConceptos(allConcepts.filter(c => c.tipo === 'porCorreccion'));
-
-            // Auto-select if URL param exists
-            const idParam = searchParams.get('id');
-            if (idParam && allDecrees.some(d => d.id === idParam)) {
-                setSelectedDecreeId(idParam);
-            }
+            // Load Concepts
+            setConceptos(getConceptosAnulacion(user.parishId).filter(c => c.tipo === 'porCorreccion'));
 
             // Prepare Parish Name
             const misDatos = getMisDatosList(user.parishId);
-            let parishLabel = `${user.parishName || 'Parroquia'} - ${user.city || 'Ciudad'}`;
-            if (misDatos && misDatos.length > 0) {
-                const dato = misDatos[0];
-                parishLabel = `${dato.nombre || user.parishName} - ${dato.ciudad || user.city}`;
-            }
+            let parishLabel = (misDatos?.[0]?.nombre || user.parishName || 'Parroquia') + " - " + (misDatos?.[0]?.ciudad || user.city || 'Ciudad');
             setDecreeData(prev => ({ ...prev, parroquia: parishLabel }));
 
-            // Prepare Active Priest
             const priest = getParrocoActual(user.parishId);
-            if (priest) {
-                setActivePriest(`${priest.nombre} ${priest.apellido || ''}`.trim());
+            if (priest) setActivePriest(`${priest.nombre} ${priest.apellido || ''}`.trim());
+
+            // Handle URL params
+            const idParam = searchParams.get('id');
+            const sacramentParam = searchParams.get('sacrament');
+            if (sacramentParam) {
+                const map = { baptism: 'bautizos', confirmation: 'confirmaciones', marriage: 'matrimonios' };
+                if (map[sacramentParam]) setActiveTab(map[sacramentParam]);
             }
+            if (idParam && allDecrees.some(d => d.id === idParam)) setSelectedDecreeId(idParam);
+            else setSelectedDecreeId("");
         }
-    }, [user, getBaptismCorrections, getMisDatosList, getParrocoActual, searchParams, getConceptosAnulacion]);
+    }, [user, activeTab, searchParams]);
 
     // --- LOAD SELECTED DECREE ---
     useEffect(() => {
         if (selectedDecreeId) {
             const decree = decrees.find(d => d.id === selectedDecreeId);
             if (decree) {
-                
-                // --- AUTO-POPULATE "Datos de Partida Anulada" & Concept ---
-                let resolvedTargetName = decree.targetName || '';
-                let resolvedBook = decree.book || '';
-                let resolvedPage = decree.page || '';
-                let resolvedEntry = decree.entry || '';
-                let resolvedConceptId = decree.conceptoAnulacionId || '';
-
-                // 1. Attempt to resolve Baptism Data via targetBaptismId
-                if (decree.targetBaptismId) {
-                     const allBaptisms = getBaptisms(user?.parishId);
-                     const targetBaptism = allBaptisms.find(b => b.id === decree.targetBaptismId);
-                     
-                     if (targetBaptism) {
-                         const fName = targetBaptism.firstName || targetBaptism.nombres || '';
-                         const lName = targetBaptism.lastName || targetBaptism.apellidos || '';
-                         resolvedTargetName = `${fName} ${lName}`.trim();
-                         
-                         resolvedBook = targetBaptism.book_number || targetBaptism.libro || '';
-                         resolvedPage = targetBaptism.page_number || targetBaptism.folio || '';
-                         resolvedEntry = targetBaptism.entry_number || targetBaptism.numero || '';
-                         
-                         // Update the "Found Record" display
-                         setFoundRecord(targetBaptism);
-                     } else {
-                         console.warn("EditDecree: targetBaptismId exists but record not found in local baptisms.");
-                     }
-                } else if (decree.originalPartidaSummary) {
-                     // Fallback: Use stored summary
-                     const sum = decree.originalPartidaSummary;
-                     resolvedBook = sum.book || sum.book_number || resolvedBook;
-                     resolvedPage = sum.page || sum.page_number || resolvedPage;
-                     resolvedEntry = sum.entry || sum.entry_number || resolvedEntry;
-                     // Only overwrite targetName from summary if we have nothing better
-                     const sumName = sum.names || `${sum.firstName || ''} ${sum.lastName || ''}`.trim();
-                     if (sumName) resolvedTargetName = sumName;
-                     
-                     setFoundRecord(sum);
-                }
-
-                // 2. Attempt to resolve Concept ID via annulmentConceptCode
-                // Only map if we have a code and it doesn't match a currently selected ID
-                if (decree.annulmentConceptCode) {
-                    // Try to find concept by matching code
-                    const match = conceptos.find(c => String(c.codigo) === String(decree.annulmentConceptCode));
-                    if (match) {
-                        resolvedConceptId = match.id;
-                    } else {
-                        console.warn(`EditDecree: Concept code ${decree.annulmentConceptCode} not found in catalog.`);
-                    }
-                }
-
-                setDecreeData(prev => ({
-                    ...prev,
-                    parroquia: decree.parroquia || prev.parroquia,
+                setDecreeData({
+                    parroquia: decreeData.parroquia,
                     decreeNumber: decree.decreeNumber || '',
                     decreeDate: decree.decreeDate || '',
-                    targetName: resolvedTargetName,
-                    book: resolvedBook,
-                    page: resolvedPage,
-                    entry: resolvedEntry,
-                    conceptoAnulacionId: resolvedConceptId
-                }));
+                    targetName: decree.targetName || '',
+                    book: decree.book || (decree.originalPartidaSummary?.book_number || decree.originalPartidaSummary?.libro || ''),
+                    page: decree.page || (decree.originalPartidaSummary?.page_number || decree.originalPartidaSummary?.folio || ''),
+                    entry: decree.entry || (decree.originalPartidaSummary?.entry_number || decree.originalPartidaSummary?.numero || ''),
+                    conceptoAnulacionId: decree.conceptoAnulacionId || ''
+                });
 
-                // --- POPULATE "Datos de Nueva Partida" (Section 2) ---
-                if (decree.baptismData) {
-                    const bd = decree.baptismData;
-                    setNewPartida({
-                        sacramentDate: bd.sacramentDate || bd.fecha_sacramento || '',
-                        firstName: bd.firstName || bd.nombres || '',
-                        lastName: bd.lastName || bd.apellidos || '',
-                        birthDate: bd.birthDate || bd.fecha_nacimiento || '',
-                        lugarNacimientoDetalle: bd.lugarNacimientoDetalle || bd.lugar_nacimiento || '',
-                        fatherName: bd.fatherName || bd.padre_nombre || '',
-                        motherName: bd.motherName || bd.madre_nombre || '',
-                        tipoUnionPadres: bd.tipoUnionPadres || bd.tipo_union || '1',
-                        sex: bd.sex || bd.sexo || '1',
-                        paternalGrandparents: bd.paternalGrandparents || bd.abuelos_paternos || '',
-                        maternalGrandparents: bd.maternalGrandparents || bd.abuelos_maternos || '',
-                        godparents: bd.godparents || bd.padrinos || '',
-                        minister: bd.minister || bd.ministro || '',
-                        ministerFaith: bd.ministerFaith || bd.da_fe || ''
+                if (activeTab === 'bautizos') {
+                    const data = decree.baptismData || decree.newPartidaSummary || {};
+                    setNewBaptismPartida({
+                        sacramentDate: data.sacramentDate || data.fecbau || '',
+                        firstName: data.firstName || data.nombres || '',
+                        lastName: data.lastName || data.apellidos || '',
+                        birthDate: data.birthDate || data.fecnac || '',
+                        lugarNacimientoDetalle: data.lugarNacimientoDetalle || data.lugarn || '',
+                        fatherName: data.fatherName || data.padre || '',
+                        motherName: data.motherName || data.madre || '',
+                        tipoUnionPadres: data.tipoUnionPadres || data.tipohijo || '1',
+                        sex: data.sex || data.sexo || '1',
+                        paternalGrandparents: data.paternalGrandparents || data.abuepat || '',
+                        maternalGrandparents: data.maternalGrandparents || data.abuemat || '',
+                        godparents: data.godparents || data.padrinos || '',
+                        minister: data.minister || data.ministro || '',
+                        ministerFaith: data.ministerFaith || data.dafe || ''
                     });
-                } else if (decree.newPartidaSummary) {
-                    setNewPartida(decree.newPartidaSummary);
+                } else if (activeTab === 'confirmaciones') {
+                    const data = decree.newPartidaSummary || decree.confirmationData || {};
+                    setNewConfPartida({
+                        sacramentDate: data.sacramentDate || data.feccof || '',
+                        firstName: data.firstName || data.nombres || '',
+                        lastName: data.lastName || data.apellidos || '',
+                        birthDate: data.birthDate || data.fecnac || '',
+                        lugarNacimientoDetalle: data.lugarNacimientoDetalle || data.lugarNacimiento || '',
+                        fatherName: data.fatherName || data.padre || '',
+                        motherName: data.motherName || data.madre || '',
+                        padrino: data.padrino || '',
+                        madrina: data.madrina || '',
+                        minister: data.minister || data.ministro || '',
+                        ministerFaith: data.ministerFaith || data.dafe || ''
+                    });
+                } else if (activeTab === 'matrimonios') {
+                    const data = decree.newPartidaSummary || decree.marriageData || {};
+                    setNewMarPartida({
+                        sacramentDate: data.sacramentDate || data.fechaCelebracion || '',
+                        husbandName: data.husbandName || data.esposoNombres || '',
+                        husbandSurname: data.husbandSurname || data.esposoApellidos || '',
+                        wifeName: data.wifeName || data.esposaNombres || '',
+                        wifeSurname: data.wifeSurname || data.esposaApellidos || '',
+                        husbandFather: data.husbandFather || '',
+                        husbandMother: data.husbandMother || '',
+                        wifeFather: data.wifeFather || '',
+                        wifeMother: data.wifeMother || '',
+                        witnesses: data.witnesses || '',
+                        minister: data.minister || data.ministro || '',
+                        ministerFaith: data.ministerFaith || data.dafe || ''
+                    });
                 }
             }
         }
-    }, [selectedDecreeId, decrees, user, conceptos, getBaptisms]);
-
-    // Handle click outside suggestions
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setShowSuggestions(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => { document.removeEventListener("mousedown", handleClickOutside); };
-    }, [wrapperRef]);
+    }, [selectedDecreeId, decrees, activeTab]);
 
     // --- HANDLERS ---
 
     const handleDecreeChange = (e) => {
         const { name, value } = e.target;
         setDecreeData(prev => ({ ...prev, [name]: value }));
-
-        if (name === 'targetName') {
-            if (value.length > 2) {
-                const allBaptisms = getBaptisms(user?.parishId);
-                const filtered = allBaptisms.filter(b => {
-                    const fullName = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase();
-                    return fullName.includes(value.toLowerCase());
-                }).slice(0, 5);
-                setSuggestions(filtered);
-                setShowSuggestions(true);
-            } else {
-                setSuggestions([]);
-                setShowSuggestions(false);
-            }
-        }
-    };
-
-    const handleSuggestionClick = (record) => {
-        const fullName = `${record.firstName} ${record.lastName}`;
-        setDecreeData(prev => ({ ...prev, targetName: fullName }));
-        setShowSuggestions(false);
-    };
-
-    const handleNewPartidaChange = (e) => {
-        const { name, value } = e.target;
-        setNewPartida(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSearch = (bookVal, pageVal, entryVal, silent = false) => {
-        const book = bookVal || decreeData.book;
-        const page = pageVal || decreeData.page;
-        const entry = entryVal || decreeData.entry;
-        
-        if (!book || !page || !entry) {
-            if (!silent) setSearchMessage({ type: 'error', text: "Ingrese Libro, Folio y Número." });
-            return;
-        }
-
-        setIsSearching(true);
-        if (!silent) setSearchMessage(null);
-        if (!silent) setFoundRecord(null);
-
-        setTimeout(() => {
-            const allBaptisms = getBaptisms(user?.parishId);
-            const found = allBaptisms.find(b => 
-                String(b.book_number) === String(book) &&
-                String(b.page_number) === String(page) &&
-                String(b.entry_number) === String(entry)
-            );
-
-            if (found) {
-                setFoundRecord(found);
-                if (!silent) setSearchMessage({ type: 'success', text: "Partida encontrada." });
-            } else {
-                if (!silent) setSearchMessage({ type: 'error', text: "No encontrada." });
-            }
-            setIsSearching(false);
-        }, 300);
     };
 
     const handleSave = async (e) => {
         e.preventDefault();
         if (!selectedDecreeId) return;
-
         setIsSubmitting(true);
         
         try {
-            // Update the Decree Record
-            const updatedData = {
-                ...decreeData,
-                newPartidaSummary: newPartida,
-                // Also update stored summary of original if we found it anew
-                ...(foundRecord ? { originalPartidaSummary: foundRecord } : {})
-            };
+            const parishId = user?.parishId;
+            let updatedDecree = { ...decreeData };
 
-            const result = updateBaptismCorrection(selectedDecreeId, updatedData, user?.parishId);
+            if (activeTab === 'bautizos') {
+                const result = updateBaptismCorrection(selectedDecreeId, { ...decreeData, newPartidaSummary: newBaptismPartida }, parishId);
+                if (!result.success) throw new Error(result.message);
 
-            if (result.success) {
-                // IMPORTANT: In a real backend, this would be transactional. 
-                // Here we also need to update the actual Baptism Record in the list to reflect changes in "New Partida"
-                // The decree record has a reference 'newPartidaId'
+                // Update actual Baptism records (Anulada & Supletoria)
+                const allBaptisms = getBaptisms(parishId);
                 const decree = decrees.find(d => d.id === selectedDecreeId);
-                const allBaptisms = getBaptisms(user?.parishId);
-                let baptismsUpdated = false;
-                const updatedBaptisms = [...allBaptisms];
+                const updated = allBaptisms.map(b => {
+                    if (b.id === decree.newPartidaId) return { ...b, ...newBaptismPartida, updatedAt: new Date().toISOString() };
+                    if (b.id === decree.originalPartidaId) return { ...b, conceptoAnulacionId: decreeData.conceptoAnulacionId, updatedAt: new Date().toISOString() };
+                    return b;
+                });
+                localStorage.setItem(`baptisms_${parishId}`, JSON.stringify(updated));
 
-                // 1. Update New Partida (Supletoria)
-                if (decree && decree.newPartidaId) {
-                    const baptIdx = updatedBaptisms.findIndex(b => b.id === decree.newPartidaId);
-                    
-                    if (baptIdx !== -1) {
-                        updatedBaptisms[baptIdx] = {
-                            ...updatedBaptisms[baptIdx],
-                            ...newPartida, // Apply all edits from Section 2
-                            conceptoAnulacionId: decreeData.conceptoAnulacionId, // Update link to concept
-                            tipoNotaAlMargen: 'porCorreccion.nuevaPartida', // AUTOMATIC LINKING
-                            updatedAt: new Date().toISOString()
-                        };
-                        baptismsUpdated = true;
-                    }
-                }
+            } else if (activeTab === 'confirmaciones') {
+                const key = `confirmationCorrections_${parishId}`;
+                const all = JSON.parse(localStorage.getItem(key) || '[]');
+                const idx = all.findIndex(d => d.id === selectedDecreeId);
+                all[idx] = { ...all[idx], ...decreeData, newPartidaSummary: newConfPartida, updatedAt: new Date().toISOString() };
+                localStorage.setItem(key, JSON.stringify(all));
 
-                // 2. Update Original Partida (Anulada)
-                const originalId = decree.originalPartidaId || (foundRecord ? foundRecord.id : null);
-                if (originalId) {
-                    const originalIdx = updatedBaptisms.findIndex(b => b.id === originalId);
-                    
-                    if (originalIdx !== -1) {
-                        const newSummary = decree.newPartidaSummary || {};
-                        const noteData = {
-                            numero: decreeData.decreeNumber,
-                            fecha: decreeData.decreeDate,
-                            libro: newSummary.book || newSummary.book_number || '---',
-                            folio: newSummary.page || newSummary.page_number || '---'
-                        };
+                const confKey = `confirmations_${parishId}`;
+                const allConf = JSON.parse(localStorage.getItem(confKey) || '[]');
+                const updatedConf = allConf.map(c => {
+                    if (c.id === all[idx].newPartidaId) return { ...c, ...newConfPartida, updatedAt: new Date().toISOString() };
+                    return c;
+                });
+                localStorage.setItem(confKey, JSON.stringify(updatedConf));
 
-                        const marginalNote = updateBaptismPartidaMarginalNote(originalId, noteData, null);
+            } else if (activeTab === 'matrimonios') {
+                const key = `marriageCorrections_${parishId}`;
+                const all = JSON.parse(localStorage.getItem(key) || '[]');
+                const idx = all.findIndex(d => d.id === selectedDecreeId);
+                all[idx] = { ...all[idx], ...decreeData, newPartidaSummary: newMarPartida, updatedAt: new Date().toISOString() };
+                localStorage.setItem(key, JSON.stringify(all));
 
-                        updatedBaptisms[originalIdx] = {
-                            ...updatedBaptisms[originalIdx],
-                            notaMarginal: marginalNote,
-                            conceptoAnulacionId: decreeData.conceptoAnulacionId, // Update link to concept also on original
-                            tipoNotaAlMargen: 'porCorreccion.anulada', // AUTOMATIC LINKING
-                            updatedAt: new Date().toISOString()
-                        };
-                        baptismsUpdated = true;
-                        
-                        // Notify user specifically about this update
-                        setTimeout(() => {
-                             toast({ 
-                                title: "Nota Marginal Actualizada", 
-                                description: "Partida de bautismo actualizada con nota al margen del decreto",
-                                className: "bg-blue-50 border-blue-200 text-blue-900"
-                            });
-                        }, 500);
-                    }
-                }
-
-                // Save if any changes to baptisms array
-                if (baptismsUpdated) {
-                    localStorage.setItem(`baptisms_${user.parishId}`, JSON.stringify(updatedBaptisms));
-                }
-
-                // Refresh local list
-                setDecrees(getBaptismCorrections(user?.parishId));
-                toast({ title: "Guardado", description: "Decreto y partida actualizados correctamente.", className: "bg-green-50 border-green-200 text-green-900" });
-            } else {
-                throw new Error(result.message);
+                const marKey = `matrimonios_${parishId}`;
+                const allMar = JSON.parse(localStorage.getItem(marKey) || '[]');
+                const updatedMar = allMar.map(m => {
+                    if (m.id === all[idx].newPartidaId) return { ...m, ...newMarPartida, updatedAt: new Date().toISOString() };
+                    return m;
+                });
+                localStorage.setItem(marKey, JSON.stringify(updatedMar));
             }
+
+            toast({ title: "Guardado", description: "Cambios guardados correctamente.", className: "bg-green-50" });
+            navigate('/parroquia/decretos/ver-correcciones');
         } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: error.message || "Error al guardar.", variant: "destructive" });
+            toast({ title: "Error", description: error.message, variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -383,33 +257,21 @@ const EditDecreeCorrectionSheet = () => {
 
     const handleDelete = () => {
         if (!selectedDecreeId) return;
-        
-        const result = deleteBaptismCorrection(selectedDecreeId, user?.parishId);
-        if (result.success) {
-            setDecrees(prev => prev.filter(d => d.id !== selectedDecreeId));
-            setSelectedDecreeId("");
-            setFoundRecord(null);
-            setShowDeleteModal(false);
-            toast({ title: "Eliminado", description: "Decreto eliminado correctamente." });
+        const parishId = user?.parishId;
+
+        if (activeTab === 'bautizos') {
+            deleteBaptismCorrection(selectedDecreeId, parishId);
         } else {
-            toast({ title: "Error", description: result.message, variant: "destructive" });
+            const key = activeTab === 'confirmaciones' ? `confirmationCorrections_${parishId}` : `marriageCorrections_${parishId}`;
+            const all = JSON.parse(localStorage.getItem(key) || '[]');
+            localStorage.setItem(key, JSON.stringify(all.filter(d => d.id !== selectedDecreeId)));
         }
-    };
 
-    // Filter list
-    const filteredDecrees = decrees.filter(d => {
-        const fullName = `${d.targetName || ''}`.toLowerCase();
-        const decreeNum = `${d.decreeNumber || ''}`.toLowerCase();
-        const search = searchTerm.toLowerCase();
-        return fullName.includes(search) || decreeNum.includes(search);
-    });
-
-    // Helper to get selected concept details
-    const getConceptDetails = () => {
-        if (!decreeData.conceptoAnulacionId) return null;
-        return conceptos.find(c => c.id === decreeData.conceptoAnulacionId);
+        toast({ title: "Eliminado", description: "Decreto eliminado." });
+        setSelectedDecreeId("");
+        setShowDeleteModal(false);
+        navigate('/parroquia/decretos/ver-correcciones');
     };
-    const selectedConceptDetails = getConceptDetails();
 
     return (
         <DashboardLayout entityName={user?.parishName || "Parroquia"}>
@@ -418,7 +280,7 @@ const EditDecreeCorrectionSheet = () => {
                     <X className="w-6 h-6 text-gray-500" />
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 font-serif">Editar Decreto Corrección (Hoja)</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 font-serif">Editar Decreto Corrección</h1>
                     <p className="text-gray-500 text-sm">Modifique los datos del decreto y la partida supletoria.</p>
                 </div>
             </div>
@@ -426,373 +288,108 @@ const EditDecreeCorrectionSheet = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-[1400px] mx-auto p-6 h-[calc(100vh-180px)] min-h-[600px]">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
                     <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 p-1 rounded-lg shrink-0">
-                        <TabsTrigger value="bautizos" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
-                            Bautizos
-                        </TabsTrigger>
-                        <TabsTrigger value="confirmaciones" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">
-                            Confirmaciones
-                        </TabsTrigger>
-                        <TabsTrigger value="matrimonios" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm">
-                            Matrimonios
-                        </TabsTrigger>
+                        <TabsTrigger value="bautizos" className="font-bold data-[state=active]:text-blue-600">Bautizos</TabsTrigger>
+                        <TabsTrigger value="confirmaciones" className="font-bold data-[state=active]:text-red-600">Confirmaciones</TabsTrigger>
+                        <TabsTrigger value="matrimonios" className="font-bold data-[state=active]:text-purple-600">Matrimonios</TabsTrigger>
                     </TabsList>
 
                     <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden min-h-0">
-                        {/* LEFT SIDEBAR: LIST */}
+                        {/* SIDEBAR */}
                         <div className="lg:col-span-1 border-r border-gray-200 pr-4 flex flex-col h-full overflow-hidden">
                              <div className="relative mb-4 shrink-0">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-                                <input
-                                    placeholder="Buscar por nombre o decreto..."
-                                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#4B7BA7]"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                                <input placeholder="Buscar..." className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                             </div>
-                            
                             <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                {filteredDecrees.length === 0 ? (
-                                    <p className="text-sm text-gray-500 text-center py-4">No hay decretos.</p>
-                                ) : (
-                                    filteredDecrees.map((decree) => (
-                                        <button
-                                            key={decree.id}
-                                            onClick={() => setSelectedDecreeId(decree.id)}
-                                            className={cn(
-                                                "w-full text-left p-3 rounded-lg text-sm transition-all border group",
-                                                selectedDecreeId === decree.id
-                                                    ? "bg-blue-50 border-blue-200 ring-1 ring-blue-300"
-                                                    : "bg-white border-gray-100 hover:bg-gray-50 hover:border-gray-300"
-                                            )}
-                                        >
-                                            <div className="font-bold text-gray-800 flex justify-between">
-                                                <span>{decree.decreeNumber}</span>
-                                                <span className="text-[10px] font-normal text-gray-400">{decree.decreeDate}</span>
-                                            </div>
-                                            <div className="text-gray-600 truncate text-xs mt-1 font-medium">{decree.targetName}</div>
-                                            <div className="text-[10px] text-gray-400 mt-1">L:{decree.book} F:{decree.page} N:{decree.entry}</div>
-                                        </button>
-                                    ))
-                                )}
+                                {decrees.filter(d => (d.targetName || '').toLowerCase().includes(searchTerm.toLowerCase()) || (d.decreeNumber || '').toLowerCase().includes(searchTerm.toLowerCase())).map((decree) => (
+                                    <button key={decree.id} onClick={() => setSelectedDecreeId(decree.id)} className={cn("w-full text-left p-3 rounded-lg text-sm border", selectedDecreeId === decree.id ? "bg-blue-50 border-blue-200 ring-1 ring-blue-300" : "bg-white border-gray-100 hover:bg-gray-50")}>
+                                        <div className="font-bold text-gray-800 flex justify-between"><span>{decree.decreeNumber}</span><span className="text-[10px] text-gray-400">{decree.decreeDate}</span></div>
+                                        <div className="text-gray-600 truncate text-xs mt-1">{decree.targetName}</div>
+                                    </button>
+                                ))}
                             </div>
                         </div>
 
-                        {/* RIGHT SIDE: FORM */}
+                        {/* FORM */}
                         <div className="lg:col-span-3 h-full overflow-y-auto custom-scrollbar px-2">
-                            <TabsContent value="bautizos" className="mt-0 pb-10">
-                                {renderBautizosForm()}
-                            </TabsContent>
-                             <TabsContent value="confirmaciones" className="mt-0 h-full flex items-center justify-center">
-                                <div className="text-center text-gray-400">
-                                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <h3 className="text-lg font-semibold">Confirmaciones</h3>
-                                    <p>Funcionalidad en desarrollo</p>
-                                </div>
-                            </TabsContent>
-                            <TabsContent value="matrimonios" className="mt-0 h-full flex items-center justify-center">
-                                <div className="text-center text-gray-400">
-                                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                                    <h3 className="text-lg font-semibold">Matrimonios</h3>
-                                    <p>Funcionalidad en desarrollo</p>
-                                </div>
-                            </TabsContent>
+                            {selectedDecreeId ? (
+                                <form onSubmit={handleSave} className="space-y-8 max-w-4xl mx-auto pb-20">
+                                    <div className="bg-white rounded-lg shadow-sm border-l-4 border-blue-600 p-6">
+                                        <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2"><FileText className="w-5 h-5 text-blue-600" /> DATOS DEL DECRETO</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Parroquia</label><Input value={decreeData.parroquia} readOnly className="bg-gray-100" /></div>
+                                            <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">No. Decreto</label><Input name="decreeNumber" value={decreeData.decreeNumber} onChange={handleDecreeChange} /></div>
+                                            <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha Decreto</label><Input type="date" name="decreeDate" value={decreeData.decreeDate} onChange={handleDecreeChange} /></div>
+                                            <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Concepto Anulación</label><select name="conceptoAnulacionId" value={decreeData.conceptoAnulacionId} onChange={handleDecreeChange} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"><option value="">Seleccione...</option>{conceptos.map(c => <option key={c.id} value={c.id}>{c.codigo} - {c.concepto}</option>)}</select></div>
+                                        </div>
+                                    </div>
+
+                                    <TabsContent value="bautizos" className="mt-0">{renderBaptismForm()}</TabsContent>
+                                    <TabsContent value="confirmaciones" className="mt-0">{renderConfirmationForm()}</TabsContent>
+                                    <TabsContent value="matrimonios" className="mt-0">{renderMarriageForm()}</TabsContent>
+
+                                    <div className="flex justify-between gap-4 pt-4 border-t border-gray-200 sticky bottom-0 bg-white p-4 shadow-lg rounded-t-lg z-10">
+                                        <Button type="button" variant="destructive" onClick={() => setShowDeleteModal(true)} disabled={isSubmitting}><Trash2 className="w-4 h-4 mr-2" /> Eliminar</Button>
+                                        <div className="flex gap-4">
+                                            <Button type="button" variant="outline" onClick={() => navigate('/parroquia/decretos/ver-correcciones')} disabled={isSubmitting}>Cancelar</Button>
+                                            <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white font-bold px-6">{isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />} Guardar</Button>
+                                        </div>
+                                    </div>
+                                </form>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50"><Search className="w-12 h-12 mb-2 opacity-20" /><p>Seleccione un decreto para editar</p></div>
+                            )}
                         </div>
                     </div>
                 </Tabs>
             </div>
 
-            <Modal
-                isOpen={showDeleteModal}
-                onClose={() => setShowDeleteModal(false)}
-                title="Eliminar Decreto"
-            >
-                <div className="space-y-4">
-                    <p className="text-gray-600">
-                        ¿Está seguro que desea eliminar este decreto? Esta acción no se puede deshacer.
-                    </p>
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="outline" onClick={() => setShowDeleteModal(false)}>Cancelar</Button>
-                        <Button variant="destructive" onClick={handleDelete}>Confirmar Eliminación</Button>
-                    </div>
-                </div>
-            </Modal>
+            <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Eliminar Decreto"><div className="space-y-4"><p className="text-gray-600">¿Desea eliminar este decreto? Esta acción no se puede deshacer.</p><div className="flex justify-end gap-3 pt-4"><Button variant="outline" onClick={() => setShowDeleteModal(false)}>Cancelar</Button><Button variant="destructive" onClick={handleDelete}>Confirmar</Button></div></div></Modal>
         </DashboardLayout>
     );
 
-    function renderBautizosForm() {
-        if (!selectedDecreeId) {
-            return (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-200 rounded-lg bg-gray-50 p-10 min-h-[400px]">
-                    <Search className="w-12 h-12 mb-2 opacity-20" />
-                    <p>Seleccione un decreto del listado para editar</p>
-                </div>
-            );
-        }
-
+    function renderBaptismForm() {
         return (
-            <form onSubmit={handleSave} className="space-y-8 max-w-4xl mx-auto animate-in fade-in duration-300">
-                
-                {/* --- SECCIÓN 1: DATOS DEL DECRETO --- */}
-                <div className="bg-white rounded-lg shadow-sm border-l-4 border-blue-600 p-6">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2">
-                        <FileText className="w-5 h-5 text-blue-600" /> SECCIÓN 1: DATOS DEL DECRETO
-                    </h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                        <div className="md:col-span-3">
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Parroquia - Ciudad</label>
-                            <Input value={decreeData.parroquia} readOnly className="bg-gray-100 text-gray-700 font-medium cursor-not-allowed" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Número de Decreto</label>
-                            <Input 
-                                name="decreeNumber"
-                                value={decreeData.decreeNumber} 
-                                onChange={handleDecreeChange}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha de Decreto</label>
-                            <Input 
-                                type="date"
-                                name="decreeDate"
-                                value={decreeData.decreeDate} 
-                                onChange={handleDecreeChange}
-                            />
-                        </div>
-
-                         {/* CONCEPTO DE ANULACION SELECTOR */}
-                         <div className="md:col-span-3 mt-2">
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Concepto de Anulación</label>
-                            <select
-                                name="conceptoAnulacionId"
-                                value={decreeData.conceptoAnulacionId}
-                                onChange={handleDecreeChange}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="">Seleccionar Concepto de Anulación</option>
-                                {conceptos.map(c => (
-                                    <option key={c.id} value={c.id}>
-                                        {c.codigo} - {c.concepto}
-                                    </option>
-                                ))}
-                            </select>
-                            {selectedConceptDetails && (
-                                <div className="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded flex gap-4">
-                                    <span><strong>Código:</strong> {selectedConceptDetails.codigo}</span>
-                                    <span><strong>Concepto:</strong> {selectedConceptDetails.concepto}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="bg-blue-50/50 p-6 rounded-lg border border-blue-100 mt-6">
-                        <h4 className="text-sm font-bold text-blue-800 mb-4 uppercase">Datos de Partida Anulada</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                            <div className="md:col-span-1 relative" ref={wrapperRef}>
-                                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre (Persona)</label>
-                                <Input 
-                                    name="targetName"
-                                    value={decreeData.targetName}
-                                    onChange={handleDecreeChange}
-                                    autoComplete="off"
-                                />
-                                {showSuggestions && suggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-48 overflow-auto">
-                                        {suggestions.map((record, idx) => (
-                                            <div 
-                                                key={idx}
-                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm text-gray-700"
-                                                onClick={() => handleSuggestionClick(record)}
-                                            >
-                                                {record.firstName} {record.lastName}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="md:col-span-1">
-                                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Libro</label>
-                                <Input 
-                                    name="book"
-                                    value={decreeData.book}
-                                    onChange={handleDecreeChange}
-                                />
-                            </div>
-                            <div className="md:col-span-1">
-                                <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Folio</label>
-                                <Input 
-                                    name="page"
-                                    value={decreeData.page}
-                                    onChange={handleDecreeChange}
-                                />
-                            </div>
-                            <div className="md:col-span-1 flex gap-2">
-                                <div className="flex-1">
-                                    <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Número</label>
-                                    <Input 
-                                        name="entry"
-                                        value={decreeData.entry}
-                                        onChange={handleDecreeChange}
-                                    />
-                                </div>
-                                <Button 
-                                    type="button"
-                                    onClick={() => handleSearch()} 
-                                    disabled={isSearching}
-                                    className="mb-[2px] bg-[#4B7BA7] hover:bg-[#3A6286] text-white"
-                                >
-                                    {isSearching ? <Loader2 className="w-4 h-4 animate-spin"/> : <Search className="w-4 h-4"/>}
-                                </Button>
-                            </div>
-                        </div>
-
-                        {searchMessage && (
-                            <div className={`mt-4 p-3 rounded-md text-sm font-medium flex items-center gap-2 ${searchMessage.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-                                {searchMessage.type === 'error' ? <AlertCircle className="w-4 h-4"/> : <CheckCircle2 className="w-4 h-4"/>}
-                                {searchMessage.text}
-                            </div>
-                        )}
-
-                        {foundRecord && (
-                            <div className="mt-4 p-4 bg-white border border-gray-200 rounded-md shadow-sm">
-                                <h5 className="text-xs font-bold text-gray-500 uppercase mb-2 border-b pb-1">Resumen Registro Original</h5>
-                                <div className="text-sm grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-2 gap-x-4">
-                                    <div><span className="font-semibold text-gray-700">Bautizado:</span> {foundRecord.firstName} {foundRecord.lastName}</div>
-                                    <div><span className="font-semibold text-gray-700">Padres:</span> {foundRecord.fatherName} & {foundRecord.motherName}</div>
-                                    <div><span className="font-semibold text-gray-700">Fecha:</span> {foundRecord.sacramentDate}</div>
-                                    <div><span className="font-semibold text-gray-700">Lugar Nac:</span> {foundRecord.lugarNacimientoDetalle || foundRecord.birthPlace}</div>
-                                    <div className="col-span-2 text-xs text-gray-400 italic mt-1">Este registro está marcado como ANULADO en el sistema.</div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+            <div className="bg-white rounded-lg shadow-sm border-l-4 border-green-600 p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2"><UserPlus className="w-5 h-5 text-green-600" /> DATOS NUEVA PARTIDA (BAUTISMO)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label><Input type="date" value={newBaptismPartida.sacramentDate} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, sacramentDate: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombres</label><Input value={newBaptismPartida.firstName} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, firstName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Apellidos</label><Input value={newBaptismPartida.lastName} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, lastName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Padre</label><Input value={newBaptismPartida.fatherName} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, fatherName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Madre</label><Input value={newBaptismPartida.motherName} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, motherName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Padrinos</label><Input value={newBaptismPartida.godparents} onChange={(e) => setNewBaptismPartida({...newBaptismPartida, godparents: e.target.value})} /></div>
                 </div>
+            </div>
+        );
+    }
 
-                {/* --- SECCIÓN 2: FORMULARIO DE NUEVA PARTIDA --- */}
-                <div className="bg-white rounded-lg shadow-sm border-l-4 border-green-600 p-6">
-                    <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2">
-                        <UserPlus className="w-5 h-5 text-green-600" /> SECCIÓN 2: DATOS DE NUEVA PARTIDA
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha de Bautismo</label>
-                            <Input type="date" name="sacramentDate" value={newPartida.sacramentDate} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div className="hidden md:block"></div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombres</label>
-                            <Input name="firstName" value={newPartida.firstName} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Apellidos</label>
-                            <Input name="lastName" value={newPartida.lastName} onChange={handleNewPartidaChange} />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha de Nacimiento</label>
-                            <Input type="date" name="birthDate" value={newPartida.birthDate} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Lugar de Nacimiento</label>
-                            <Input name="lugarNacimientoDetalle" value={newPartida.lugarNacimientoDetalle} onChange={handleNewPartidaChange} />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre del Padre</label>
-                            <Input name="fatherName" value={newPartida.fatherName} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombre de la Madre</label>
-                            <Input name="motherName" value={newPartida.motherName} onChange={handleNewPartidaChange} />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Tipo de Unión</label>
-                            <select 
-                                name="tipoUnionPadres" 
-                                value={newPartida.tipoUnionPadres}
-                                onChange={handleNewPartidaChange}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
-                            >
-                                <option value="1">Matrimonio Católico</option>
-                                <option value="2">Matrimonio Civil</option>
-                                <option value="3">Unión Libre</option>
-                                <option value="4">Madre Soltera</option>
-                                <option value="5">Otro Caso</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Sexo</label>
-                            <select 
-                                name="sex" 
-                                value={newPartida.sex}
-                                onChange={handleNewPartidaChange}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
-                            >
-                                <option value="1">Masculino</option>
-                                <option value="2">Femenino</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Abuelos Paternos</label>
-                            <Input name="paternalGrandparents" value={newPartida.paternalGrandparents} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Abuelos Maternos</label>
-                            <Input name="maternalGrandparents" value={newPartida.maternalGrandparents} onChange={handleNewPartidaChange} />
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Padrinos</label>
-                            <Input name="godparents" value={newPartida.godparents} onChange={handleNewPartidaChange} />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Ministro</label>
-                            <Input name="minister" value={newPartida.minister} onChange={handleNewPartidaChange} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Da Fe</label>
-                            <select 
-                                name="ministerFaith" 
-                                value={newPartida.ministerFaith}
-                                onChange={handleNewPartidaChange}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white"
-                            >
-                                {activePriest && <option value={activePriest}>{activePriest}</option>}
-                                <option value="">Otro...</option>
-                            </select>
-                            {(!activePriest || newPartida.ministerFaith !== activePriest) && (
-                                <Input 
-                                    name="ministerFaith"
-                                    value={newPartida.ministerFaith}
-                                    onChange={handleNewPartidaChange}
-                                    className="mt-2"
-                                    placeholder="Nombre manual..."
-                                />
-                            )}
-                        </div>
-                    </div>
+    function renderConfirmationForm() {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border-l-4 border-green-600 p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2"><UserPlus className="w-5 h-5 text-green-600" /> DATOS NUEVA PARTIDA (CONFIRMACIÓN)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label><Input type="date" value={newConfPartida.sacramentDate} onChange={(e) => setNewConfPartida({...newConfPartida, sacramentDate: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Nombres</label><Input value={newConfPartida.firstName} onChange={(e) => setNewConfPartida({...newConfPartida, firstName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Apellidos</label><Input value={newConfPartida.lastName} onChange={(e) => setNewConfPartida({...newConfPartida, lastName: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Padrino</label><Input value={newConfPartida.padrino} onChange={(e) => setNewConfPartida({...newConfPartida, padrino: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Madrina</label><Input value={newConfPartida.madrina} onChange={(e) => setNewConfPartida({...newConfPartida, madrina: e.target.value})} /></div>
                 </div>
+            </div>
+        );
+    }
 
-                <div className="flex justify-between gap-4 pt-4 border-t border-gray-200 sticky bottom-0 bg-white p-4 shadow-lg rounded-t-lg z-10">
-                     <Button type="button" variant="destructive" onClick={() => setShowDeleteModal(true)} disabled={isSubmitting}>
-                        <Trash2 className="w-4 h-4 mr-2" /> Eliminar Decreto
-                    </Button>
-                    <div className="flex gap-4">
-                        <Button type="button" variant="outline" onClick={() => navigate('/parroquia/decretos/ver-correcciones')} disabled={isSubmitting}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 text-white font-bold px-6">
-                            {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                            Guardar Cambios
-                        </Button>
-                    </div>
+    function renderMarriageForm() {
+        return (
+            <div className="bg-white rounded-lg shadow-sm border-l-4 border-green-600 p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-2"><Heart className="w-5 h-5 text-green-600" /> DATOS NUEVA PARTIDA (MATRIMONIO)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Fecha</label><Input type="date" value={newMarPartida.sacramentDate} onChange={(e) => setNewMarPartida({...newMarPartida, sacramentDate: e.target.value})} /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Novio</label><Input value={`${newMarPartida.husbandName} ${newMarPartida.husbandSurname}`} readOnly className="bg-gray-50" /></div>
+                    <div><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Novia</label><Input value={`${newMarPartida.wifeName} ${newMarPartida.wifeSurname}`} readOnly className="bg-gray-50" /></div>
+                    <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-600 uppercase mb-1">Testigos</label><Input value={newMarPartida.witnesses} onChange={(e) => setNewMarPartida({...newMarPartida, witnesses: e.target.value})} /></div>
                 </div>
-            </form>
+            </div>
         );
     }
 };
