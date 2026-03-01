@@ -1537,6 +1537,25 @@ export const AppDataProvider = ({ children }) => {
        localStorage.setItem(`misDatos_${parishId}`, JSON.stringify(filtered));
        return { success: true, message: "Registro eliminado" };
   };
+
+  const importMisDatos = (records, parishId) => {
+      if (!parishId) return { success: false, message: "Falta ID de parroquia" };
+      try {
+          const key = `misDatos_${parishId}`;
+          const current = JSON.parse(localStorage.getItem(key) || '[]');
+          const recordsWithIds = records.map(r => ({
+              ...r,
+              id: r.id || generateUUID(),
+              createdAt: new Date().toISOString()
+          }));
+          const updated = [...current, ...recordsWithIds];
+          localStorage.setItem(key, JSON.stringify(updated));
+          return { success: true, message: `${records.length} registros importados exitosamente.` };
+      } catch (e) {
+          console.error("Error importando Mis Datos:", e);
+          return { success: false, message: e.message };
+      }
+  };
   
   const validateUserCredentials = (username, password) => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -1662,8 +1681,6 @@ export const AppDataProvider = ({ children }) => {
   const importIglesias = () => ({ success: true });
   const importObispos = () => ({ success: true });
   const importParrocos = () => ({ success: true });
-  const importMisDatos = () => ({ success: true });
-  const importMisDatosLegacy = () => ({ success: true });
   const importPaises = () => ({ success: true });
   const importParroquiasExternas = () => ({ success: true });
 
@@ -1869,7 +1886,7 @@ export const AppDataProvider = ({ children }) => {
         getDioceses,
         getArchdioceses,
 
-        importDiocesis, importIglesias, importObispos, importParrocos, importMisDatos, importMisDatosLegacy,
+        importDiocesis, importIglesias, importObispos, importParrocos, importMisDatos,
         importCiudades, importPaises, importParroquiasExternas,
         getDiocesis: getDiocesis, addDiocesis, updateDiocesis, deleteDiocesis,
         getIglesias, getIglesiasList, addIglesia, updateIglesia, deleteIglesia,
