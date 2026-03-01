@@ -112,10 +112,10 @@ const ParishDashboard = () => {
   }, [user, data]);
 
   const statsCards = [
-    { label: 'Bautismos', value: stats.baptisms, icon: Church, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-    { label: 'Confirmaciones', value: stats.confirmations, icon: ScrollText, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-    { label: 'Matrimonios', value: stats.marriages, icon: Users, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
-    { label: 'Registros Mis Datos', value: misDatosCount, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+    { label: 'Bautismos', value: stats.baptisms, icon: Church, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+    { label: 'Confirmaciones', value: stats.confirmations, icon: ScrollText, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+    { label: 'Matrimonios', value: stats.marriages, icon: Users, color: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' },
+    { label: 'Registros Mis Datos', value: misDatosCount, icon: FileText, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
   ];
 
   const columns = [
@@ -123,8 +123,8 @@ const ParishDashboard = () => {
         header: 'Persona / Pareja',
         render: (row) => (
             <div className="flex flex-col">
-                <span className="font-bold text-[#111111]">{row.nombres}</span>
-                <span className="text-xs text-gray-500 uppercase font-medium">{row.apellidos}</span>
+                <span className="font-bold text-gray-900">{row.nombres}</span>
+                <span className="text-[10px] text-gray-600 uppercase font-black tracking-tight">{row.apellidos}</span>
             </div>
         )
     },
@@ -132,10 +132,10 @@ const ParishDashboard = () => {
         header: 'Sacramento', 
         render: (row) => (
             <span className={cn(
-                "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold",
-                row.sacramento === 'Bautismo' ? 'bg-blue-100 text-blue-700' :
-                row.sacramento === 'Confirmación' ? 'bg-amber-100 text-amber-700' :
-                'bg-rose-100 text-rose-700'
+                "inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-tight border",
+                row.sacramento === 'Bautismo' ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                row.sacramento === 'Confirmación' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                'bg-rose-50 text-rose-800 border-rose-200'
             )}>
                 {row.sacramento}
             </span>
@@ -144,8 +144,8 @@ const ParishDashboard = () => {
     {
         header: 'Fecha',
         render: (row) => (
-            <div className="flex items-center gap-2 text-gray-600">
-                <Calendar className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 text-gray-700 font-bold text-xs">
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
                 <span>{row.fecha}</span>
             </div>
         )
@@ -154,10 +154,10 @@ const ParishDashboard = () => {
       header: 'Estado', 
       render: (row) => (
         <span className={cn(
-            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
             row.isPending
-                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                ? "bg-yellow-100 text-yellow-900 border-yellow-300"
+                : "bg-emerald-100 text-emerald-900 border-emerald-300"
         )}>
             {row.isPending ? <Clock className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
             {row.isPending ? 'Pendiente' : 'Asentado'}
@@ -169,7 +169,7 @@ const ParishDashboard = () => {
         render: (row) => (
             <button
                 onClick={() => navigate(row.isPending ? `/parroquia/${row.sacramento.toLowerCase()}/sentar` : `/parroquia/${row.sacramento.toLowerCase()}/ver/${row.id}`)}
-                className="text-gray-400 hover:text-[#D4AF37] transition-colors"
+                className="text-gray-500 hover:text-[#D4AF37] transition-colors p-1"
             >
                 <ArrowUpRight className="w-5 h-5" />
             </button>
@@ -183,26 +183,26 @@ const ParishDashboard = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div>
            <div className="flex items-center gap-3 mb-1">
-             <h1 className="text-3xl font-black text-[#111111] tracking-tight">Panel de Control</h1>
+             <h1 className="text-3xl font-black text-gray-900 tracking-tight">Panel de Control</h1>
              {hasPending && (
-                <div className="animate-pulse flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 text-[10px] font-black uppercase">
+                <div className="animate-pulse flex items-center gap-1 px-3 py-1 rounded-full bg-red-600 text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
                    <AlertCircle className="w-3 h-3" />
                    Tareas Pendientes
                 </div>
              )}
            </div>
-           <p className="text-gray-500 font-medium">{user?.parishName} — Gestión Sacramental</p>
+           <p className="text-gray-600 font-bold text-sm tracking-tight">{user?.parishName} — Sistema de Gestión Sacramental</p>
         </div>
 
         <div className="flex items-center gap-3">
             <div className="flex flex-col items-end mr-2 hidden lg:flex">
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Base de Datos</span>
-                <span className="text-sm font-black text-[#111111]">LOCAL STORAGE</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Base de Datos</span>
+                <span className="text-xs font-black text-gray-900">MODO LOCAL</span>
             </div>
             <Button
                 variant="outline"
                 onClick={() => navigate('/parroquia/ajustes')}
-                className="gap-2 border-gray-200 hover:bg-gray-50 text-gray-700 font-bold"
+                className="gap-2 border-gray-300 hover:bg-gray-100 text-gray-900 font-black text-xs uppercase tracking-widest px-4 py-5 shadow-sm"
             >
                 <Database className="w-4 h-4" /> Respaldo
             </Button>
@@ -213,17 +213,17 @@ const ParishDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statsCards.map((stat, idx) => (
           <div key={idx} className={cn(
-              "relative overflow-hidden bg-white rounded-2xl p-6 border transition-all hover:shadow-lg hover:-translate-y-1 group",
+              "relative overflow-hidden bg-white rounded-2xl p-6 border-2 transition-all hover:shadow-xl hover:-translate-y-1 group",
               stat.border
           )}>
-            <div className={cn("absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-125", stat.bg.replace('bg-', 'bg-'))}></div>
+            <div className={cn("absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-125", stat.bg)}></div>
             <div className="relative flex flex-col gap-4">
-                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shadow-sm", stat.bg)}>
+                <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center shadow-inner", stat.bg)}>
                     <stat.icon className={cn("w-6 h-6", stat.color)} />
                 </div>
                 <div>
-                    <p className="text-3xl font-black text-[#111111]">{stat.value}</p>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+                    <p className="text-3xl font-black text-gray-900 tracking-tighter">{stat.value}</p>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.15em] mt-1">{stat.label}</p>
                 </div>
             </div>
           </div>
@@ -236,25 +236,25 @@ const ParishDashboard = () => {
         {/* Recent Activity Table */}
         <div className="lg:col-span-8 space-y-4">
             <div className="flex items-center justify-between px-2">
-                <h3 className="text-lg font-black text-[#111111] flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-[#D4AF37]" />
+                <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                    <div className="w-2 h-6 bg-[#D4AF37] rounded-full"></div>
                     Actividad Reciente
                 </h3>
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-2 py-1 rounded">Últimos 10 registros</span>
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest bg-gray-200 px-3 py-1.5 rounded-lg border border-gray-300 shadow-sm">Últimos 10 registros</span>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <Table columns={columns} data={recentRecords} />
                 </div>
 
                 {recentRecords.length === 0 && (
-                  <div className="text-center py-20 bg-gray-50/50">
-                    <div className="mx-auto w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+                  <div className="text-center py-24 bg-gray-50/50">
+                    <div className="mx-auto w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-lg mb-6 border border-gray-100">
                         <Activity className="h-8 w-8 text-gray-300" />
                     </div>
-                    <h3 className="text-base font-bold text-[#111111]">Sin registros recientes</h3>
-                    <p className="text-sm text-gray-500 mt-1 max-w-[250px] mx-auto">Comience agregando un nuevo sacramento para ver la actividad aquí.</p>
+                    <h3 className="text-lg font-black text-gray-900">Sin actividad detectada</h3>
+                    <p className="text-sm text-gray-600 mt-2 font-bold max-w-[280px] mx-auto leading-relaxed">Comience agregando un nuevo sacramento para visualizar la actividad en tiempo real.</p>
                   </div>
                 )}
             </div>
@@ -263,68 +263,83 @@ const ParishDashboard = () => {
         {/* Quick Actions Sidebar */}
         <div className="lg:col-span-4 space-y-6">
             <div className="space-y-4">
-                <h3 className="text-lg font-black text-[#111111] px-2 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-[#D4AF37]" />
-                    Acciones Rápidas
+                <h3 className="text-lg font-black text-gray-900 px-2 flex items-center gap-2">
+                    <div className="w-2 h-6 bg-gray-900 rounded-full"></div>
+                    Acciones de Gestión
                 </h3>
 
-                <div className="grid grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-4">
                     <button
                         onClick={() => navigate('/parroquia/bautismo/nuevo')}
-                        className="flex items-center justify-between p-4 bg-[#D4AF37] hover:bg-[#C4A027] text-white rounded-xl transition-all font-bold group"
+                        className="flex items-center justify-between p-5 bg-[#D4AF37] hover:bg-[#C4A027] text-white rounded-2xl transition-all shadow-lg hover:shadow-xl group overflow-hidden relative"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                                <Church className="w-5 h-5" />
+                        <div className="relative z-10 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                                <Church className="w-6 h-6" />
                             </div>
-                            <span>Nuevo Bautismo</span>
+                            <div className="flex flex-col items-start">
+                                <span className="text-[10px] uppercase tracking-widest font-black opacity-80">Registro</span>
+                                <span className="text-lg font-black tracking-tight">Nuevo Bautismo</span>
+                            </div>
                         </div>
-                        <Plus className="w-5 h-5 opacity-50 group-hover:opacity-100" />
+                        <Plus className="w-6 h-6 opacity-30 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10" />
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
                     </button>
 
                     <button
                         onClick={() => navigate('/parroquia/confirmacion/nuevo')}
-                        className="flex items-center justify-between p-4 bg-[#111111] hover:bg-gray-800 text-white rounded-xl transition-all font-bold group"
+                        className="flex items-center justify-between p-5 bg-gray-900 hover:bg-gray-800 text-white rounded-2xl transition-all shadow-lg hover:shadow-xl group overflow-hidden relative"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
-                                <ScrollText className="w-5 h-5" />
+                        <div className="relative z-10 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
+                                <ScrollText className="w-6 h-6" />
                             </div>
-                            <span>Nueva Confirmación</span>
+                            <div className="flex flex-col items-start">
+                                <span className="text-[10px] uppercase tracking-widest font-black opacity-60">Registro</span>
+                                <span className="text-lg font-black tracking-tight">Nueva Confirmación</span>
+                            </div>
                         </div>
-                        <Plus className="w-5 h-5 opacity-50 group-hover:opacity-100" />
+                        <Plus className="w-6 h-6 opacity-20 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10" />
                     </button>
 
                     <button
                         onClick={() => navigate('/parroquia/matrimonio/nuevo')}
-                        className="flex items-center justify-between p-4 bg-white border border-gray-200 hover:border-[#D4AF37] hover:bg-gray-50 text-[#111111] rounded-xl transition-all font-bold group"
+                        className="flex items-center justify-between p-5 bg-white border-2 border-gray-100 hover:border-rose-200 hover:bg-rose-50/30 text-gray-900 rounded-2xl transition-all shadow-sm hover:shadow-lg group overflow-hidden relative"
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center text-rose-600">
-                                <Users className="w-5 h-5" />
+                        <div className="relative z-10 flex items-center gap-4">
+                            <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-600 border border-rose-100">
+                                <Users className="w-6 h-6" />
                             </div>
-                            <span>Nuevo Matrimonio</span>
+                            <div className="flex flex-col items-start">
+                                <span className="text-[10px] uppercase tracking-widest font-black text-rose-400">Registro</span>
+                                <span className="text-lg font-black tracking-tight">Nuevo Matrimonio</span>
+                            </div>
                         </div>
-                        <Plus className="w-5 h-5 text-gray-300 group-hover:text-[#D4AF37]" />
+                        <Plus className="w-6 h-6 text-gray-300 group-hover:text-rose-400 group-hover:scale-125 transition-all relative z-10" />
                     </button>
                 </div>
             </div>
 
             {/* Quick Tips or Reminders */}
-            <div className="bg-gradient-to-br from-[#111111] to-gray-800 rounded-2xl p-6 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <Database className="w-20 h-20" />
+            <div className="bg-gray-900 rounded-2xl p-7 text-white relative overflow-hidden shadow-2xl border border-gray-800">
+                <div className="absolute -right-8 -bottom-8 p-4 opacity-5">
+                    <Database className="w-40 h-40" />
                 </div>
-                <h4 className="font-black text-sm uppercase tracking-widest mb-2 text-[#D4AF37]">Recordatorio de Seguridad</h4>
-                <p className="text-xs text-gray-300 leading-relaxed font-medium">
-                    Recuerde realizar una copia de seguridad semanal de sus datos. La información se almacena localmente en este navegador.
-                </p>
-                <button
-                    onClick={() => navigate('/parroquia/ajustes')}
-                    className="mt-4 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:text-[#D4AF37] transition-colors"
-                >
-                    Ir a configuración <ArrowUpRight className="w-3 h-3" />
-                </button>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-2 h-2 bg-[#D4AF37] rounded-full animate-pulse"></div>
+                        <h4 className="font-black text-[10px] uppercase tracking-[0.2em] text-[#D4AF37]">Protocolo de Seguridad</h4>
+                    </div>
+                    <p className="text-xs text-gray-400 leading-relaxed font-bold">
+                        La integridad de su información es nuestra prioridad. Realice copias de seguridad de forma periódica.
+                    </p>
+                    <button
+                        onClick={() => navigate('/parroquia/ajustes')}
+                        className="mt-6 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 text-white hover:text-[#D4AF37] transition-all bg-white/5 px-4 py-2.5 rounded-lg border border-white/10"
+                    >
+                        Configuración avanzada <ArrowUpRight className="w-3.5 h-3.5" />
+                    </button>
+                </div>
             </div>
         </div>
 
