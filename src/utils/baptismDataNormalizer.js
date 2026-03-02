@@ -6,25 +6,13 @@ import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
  * into a standardized format expected by the BaptismPrintTemplate.
  */
 export const normalizeBaptismPartida = (rawData) => {
-    if (!rawData) {
-        console.warn("normalizeBaptismPartida received null or undefined data");
-        return getEmptyPartida();
-    }
+    if (!rawData) return getEmptyPartida();
 
     try {
-        const normalizeDate = (dateVal) => {
-            if (!dateVal) return '';
-            return dateVal;
-        };
-
-        const fechaBautismo = normalizeDate(rawData.sacramentDate || rawData.fechaBautismo || rawData.FecBau);
-        const fechaNacimiento = normalizeDate(rawData.birthDate || rawData.fechaNacimiento || rawData.FecNac);
-
+        const normalizeDate = (d) => d || '';
         const arrayToString = (val) => {
             if (!val) return '';
-            if (Array.isArray(val)) {
-                return val.map(item => (typeof item === 'object' ? item.name : item)).join(', ');
-            }
+            if (Array.isArray(val)) return val.map(item => (typeof item === 'object' ? item.name : item)).join(', ');
             return String(val);
         };
 
@@ -36,90 +24,67 @@ export const normalizeBaptismPartida = (rawData) => {
             return v;
         };
 
-        const normalized = {
+        return {
             id: rawData.id || '',
             libro: String(rawData.book_number || rawData.libro || rawData.Libro || '---'),
             folio: String(rawData.page_number || rawData.folio || rawData.Folio || '---'),
             numero: String(rawData.entry_number || rawData.numero || rawData.Numero || '---'),
-            fechaBautismo: fechaBautismo,
-            lugarBautismoDetalle: rawData.lugarBautismoDetalle || rawData.lugarBautismo || rawData.sacramentPlace || rawData.place || '',
+            fechaBautismo: normalizeDate(rawData.sacramentDate || rawData.fechaBautismo || rawData.FecBau),
+            lugarBautismoDetalle: rawData.lugarBautismoDetalle || rawData.lugarBautismo || rawData.sacramentPlace || '',
             ministro: rawData.minister || rawData.ministro || '',
-            daFe: rawData.daFe || rawData.ministerFaith || rawData.DaFe || '', 
-            nombres: rawData.firstName || rawData.nombres || rawData.Nombres || '',
-            apellidos: rawData.lastName || rawData.apellidos || rawData.Apellidos || '',
-            fechaNacimiento: fechaNacimiento,
+            daFe: rawData.daFe || rawData.ministerFaith || '',
+            nombres: rawData.firstName || rawData.nombres || '',
+            apellidos: rawData.lastName || rawData.apellidos || '',
+            fechaNacimiento: normalizeDate(rawData.birthDate || rawData.fechaNacimiento || rawData.FecNac),
             lugarNacimientoDetalle: rawData.lugarNacimientoDetalle || rawData.lugarNacimiento || rawData.birthPlace || '',
             sexo: normalizeSexo(rawData.sex || rawData.sexo),
-            nombrePadre: rawData.fatherName || rawData.nombrePadre || rawData.Padre || '',
+            nombrePadre: rawData.fatherName || rawData.nombrePadre || '',
             cedulaPadre: rawData.fatherId || rawData.cedulaPadre || '',
-            nombreMadre: rawData.motherName || rawData.nombreMadre || rawData.Madre || '',
+            nombreMadre: rawData.motherName || rawData.nombreMadre || '',
             cedulaMadre: rawData.motherId || rawData.cedulaMadre || '',
             tipoUnionPadres: rawData.tipoUnionPadres || rawData.parentsUnionType || '',
             abuelosPaternos: arrayToString(rawData.paternalGrandparents || rawData.abuelosPaternos),
             abuelosMaternos: arrayToString(rawData.maternalGrandparents || rawData.abuelosMaternos),
             padrinos: arrayToString(rawData.godparents || rawData.padrinos),
-            
-            // CRITICAL: Ensure marginal notes are carried over
-            notaAlMargen: rawData.notaMarginal || rawData.notaAlMargen || rawData.NotaMarginal || '',
+            notaAlMargen: rawData.notaMarginal || rawData.notaAlMargen || '',
             notaMarginalMatrimonio: rawData.notaMarginalMatrimonio || '',
             isMarried: rawData.isMarried || false,
-
-            oficinaRegistroCivil: rawData.registryOffice || rawData.oficinaRegistroCivil || '',
+            oficinaRegistroCivil: rawData.registryOffice || '',
             parroquiaInfo: rawData.parroquiaInfo || {}
         };
-
-        return normalized;
-
-    } catch (error) {
-        console.error("Error normalizing baptism data:", error);
+    } catch (e) {
+        console.error("Normalization error:", e);
         return getEmptyPartida();
     }
 };
 
-/**
- * Enriches a normalized partida with auxiliary data (parish details).
- */
 export const enrichBaptismPartidaWithAuxiliaryData = (partida, auxiliaryData) => {
-    if (!partida) return null;
-    if (!auxiliaryData) return partida;
-    
+    if (!partida || !auxiliaryData) return partida;
     return {
         ...partida,
         parroquiaInfo: {
             ...partida.parroquiaInfo,
-            nombre: auxiliaryData.nombre || auxiliaryData.parishName || partida.parroquiaInfo?.nombre || '',
-            direccion: auxiliaryData.direccion || auxiliaryData.address || partida.parroquiaInfo?.direccion || '',
-            telefono: auxiliaryData.telefono || auxiliaryData.phone || partida.parroquiaInfo?.telefono || '',
-            email: auxiliaryData.email || partida.parroquiaInfo?.email || '',
-            ciudad: auxiliaryData.ciudad || auxiliaryData.city || partida.parroquiaInfo?.ciudad || '',
-            departamento: auxiliaryData.departamento || auxiliaryData.state || partida.parroquiaInfo?.departamento || '',
-            diocesis: auxiliaryData.diocesis || auxiliaryData.dioceseName || partida.parroquiaInfo?.diocesis || ''
+            nombre: auxiliaryData.nombre || auxiliaryData.parishName || '',
+            direccion: auxiliaryData.direccion || auxiliaryData.address || '',
+            telefono: auxiliaryData.telefono || auxiliaryData.phone || '',
+            email: auxiliaryData.email || '',
+            ciudad: auxiliaryData.ciudad || auxiliaryData.city || '',
+            departamento: auxiliaryData.departamento || auxiliaryData.state || '',
+            diocesis: auxiliaryData.diocesis || auxiliaryData.dioceseName || ''
         }
     };
 };
 
 const getEmptyPartida = () => ({
     libro: '---', folio: '---', numero: '---',
-    fechaBautismo: '', lugarBautismoDetalle: '',
-    nombres: '', apellidos: '',
-    fechaNacimiento: '', lugarNacimientoDetalle: '', sexo: '',
-    nombrePadre: '', nombreMadre: '',
-    abuelosPaternos: '', abuelosMaternos: '', padrinos: '',
-    ministro: '', notaAlMargen: '',
-    notaMarginalMatrimonio: '',
+    fechaBautismo: '', nombres: '', apellidos: '',
+    sexo: '', notaAlMargen: '', notaMarginalMatrimonio: '',
     parroquiaInfo: {}
 });
 
-/**
- * Validates the minimum structure required for a baptism record.
- */
-export const validateBaptismPartidaStructure = (normalizedData) => {
+export const validateBaptismPartidaStructure = (data) => {
     const missing = [];
-    if (!normalizedData.nombres && !normalizedData.apellidos) missing.push('Nombres/Apellidos');
-    if (!normalizedData.fechaBautismo) missing.push('Fecha de Bautismo');
-
-    return {
-        isValid: missing.length === 0,
-        missingFields: missing
-    };
+    if (!data.nombres && !data.apellidos) missing.push('Nombre/Apellido');
+    if (!data.fechaBautismo) missing.push('Fecha');
+    return { isValid: missing.length === 0, missingFields: missing };
 };
