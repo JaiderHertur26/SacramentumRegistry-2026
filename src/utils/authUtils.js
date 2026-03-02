@@ -1,6 +1,9 @@
 
 import { ROLE_TYPES } from '@/config/supabaseConfig';
 
+/**
+ * Validates user credentials against the local storage 'users' collection.
+ */
 export const validateUserCredentials = (username, password) => {
     if (!username || !password) return null;
     try {
@@ -10,10 +13,14 @@ export const validateUserCredentials = (username, password) => {
             return uName === username.toLowerCase().trim() && u.password === password;
         }) || null;
     } catch (e) {
+        console.error("Auth validation error:", e);
         return null;
     }
 };
 
+/**
+ * Initializes the default admin user if it doesn't exist.
+ */
 export const initializeAdminUser = () => {
     try {
         const users = JSON.parse(localStorage.getItem('users') || '[]');

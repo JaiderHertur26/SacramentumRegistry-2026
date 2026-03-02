@@ -34,20 +34,10 @@ const sanitizeValue = (val, fallback = '') => {
   if (val === null || val === undefined) return fallback;
   if (typeof val === 'string') return val;
   if (typeof val === 'number') return String(val);
-  if (typeof val === 'object') return val.name || val.username || val.label || val.role || fallback;
+  if (typeof val === 'object') {
+      return val.name || val.username || val.label || val.role || fallback;
+  }
   return String(val);
-};
-
-const sanitizeUser = (u) => {
-  if (!u) return null;
-  return {
-    ...u,
-    username: sanitizeValue(u.username, 'Usuario'),
-    role: sanitizeValue(u.role, 'guest'),
-    parishName: sanitizeValue(u.parishName, ''),
-    dioceseName: sanitizeValue(u.dioceseName, ''),
-    chancelleryName: sanitizeValue(u.chancelleryName, '')
-  };
 };
 
 const initializeCollections = () => {
@@ -71,15 +61,16 @@ const initializeCollections = () => {
 };
 
 export const AppDataProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(() => {
-      const stored = localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : null;
-  });
-
   const [data, setData] = useState({
     users: [], dioceses: [], vicariates: [], deaneries: [], parishes: [],
     chancelleries: [], sacraments: [], communications: [], catalogs: {},
     chancellors: [], misDatos: [], conceptosAnulacion: [], decreeReplacements: []
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+      const stored = localStorage.getItem('currentUser');
+      if (!stored) return null;
+      try { return JSON.parse(stored); } catch(e) { return null; }
   });
 
   const [baptismParameters, setBaptismParameters] = useState(null);
@@ -92,7 +83,7 @@ export const AppDataProvider = ({ children }) => {
     const replacementsKey = entityId ? `decreeReplacements_${entityId}` : 'decreeReplacements';
 
     setData({
-      users: rawUsers.map(sanitizeUser),
+      users: rawUsers,
       dioceses: JSON.parse(localStorage.getItem('dioceses') || '[]'),
       vicariates: JSON.parse(localStorage.getItem('vicariates') || '[]'),
       deaneries: JSON.parse(localStorage.getItem('deaneries') || '[]'),
@@ -108,36 +99,29 @@ export const AppDataProvider = ({ children }) => {
     });
   }, [currentUser]);
 
+  const loadNotifications = useCallback(() => {
+    const stored = localStorage.getItem('parishNotifications');
+    setParishNotifications(stored ? JSON.parse(stored) : {});
+  }, []);
+
+  const loadParameters = useCallback(() => {
+      setBaptismParameters(JSON.parse(localStorage.getItem('baptismParameters')) || {});
+  }, []);
+
   useEffect(() => {
     initializeCollections();
-    loadData();
-
-    // Admin user check
-    const now = new Date().toISOString();
-    const adminUser = {
-        id: '1',
-        username: 'Hertur26',
-        email: 'admin@eclesia.org',
-        password: '1052042443-Ht',
-        role: ROLE_TYPES.ADMIN_GENERAL,
-        createdAt: now
-    };
-
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    const hasAdmin = users.some(u => (u.role?.name || u.role) === ROLE_TYPES.ADMIN_GENERAL);
-    if (!hasAdmin) {
-        users.push(adminUser);
-        localStorage.setItem('users', JSON.stringify(users));
-    }
+    loadNotifications();
+    loadParameters();
 
     const handleStorage = (e) => {
         if (e.key === 'currentUser') {
-            setCurrentUser(e.newValue ? JSON.parse(e.newValue) : null);
+            const updated = e.newValue ? JSON.parse(e.newValue) : null;
+            setCurrentUser(updated);
         }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [loadData]);
+  }, [loadNotifications, loadParameters]);
 
   useEffect(() => {
     loadData();
@@ -146,6 +130,36 @@ export const AppDataProvider = ({ children }) => {
   const saveData = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
     setData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const validateUserCredentials = (username, password) => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = users.find(u => {
+      const uName = sanitizeValue(u.username);
+      return uName.toLowerCase().trim() === username.toLowerCase().trim() && u.password === password;
+    });
+    return foundUser || null;
+  };
+
+  const initSupabaseConnection = async (url, key) => {
+    try {
+      if (url) localStorage.setItem('supabase_url', url);
+      if (key) localStorage.setItem('supabase_key', key);
+      if (!supabase || !isSupabaseConfigured()) {
+        setSupabaseConnected(false);
+        return { success: false, message: 'Supabase no configurado.' };
+      }
+      const { error } = await supabase.from('app_state').select('key_name').limit(1);
+      if (error) {
+        setSupabaseConnected(false);
+        return { success: false, message: error.message };
+      }
+      setSupabaseConnected(true);
+      return { success: true, message: 'Conexión Supabase activa.' };
+    } catch (err) {
+      setSupabaseConnected(false);
+      return { success: false, message: err?.message || 'Error de conexión.' };
+    }
   };
 
   // --- ENTITY CREATION ---
@@ -230,7 +244,7 @@ export const AppDataProvider = ({ children }) => {
   };
 
   // --- NOTIFICATIONS ---
-  const getParishNotifications = (pid) => JSON.parse(localStorage.getItem('parishNotifications') || '{}')[pid] || [];
+  const getParishNotifications = (pid) => parishNotifications[pid] || [];
 
   const addNotificationToParish = useCallback((pid, ndata) => {
       try {
@@ -242,35 +256,6 @@ export const AppDataProvider = ({ children }) => {
           return { success: true };
       } catch (e) { return { success: false }; }
   }, []);
-
-  const updateNotificationStatus = (id, status) => {
-      const all = JSON.parse(localStorage.getItem('parishNotifications') || '{}');
-      let updated = false;
-      Object.keys(all).forEach(pid => {
-          const list = all[pid];
-          const idx = list.findIndex(n => n.id === id);
-          if (idx !== -1) {
-              list[idx] = { ...list[idx], status, updatedAt: new Date().toISOString() };
-              updated = true;
-          }
-      });
-      if (updated) {
-          localStorage.setItem('parishNotifications', JSON.stringify(all));
-          return { success: true };
-      }
-      return { success: false };
-  };
-
-  const deleteNotification = (id, pid) => {
-      const all = JSON.parse(localStorage.getItem('parishNotifications') || '{}');
-      if (pid && all[pid]) {
-          all[pid] = all[pid].filter(n => n.id !== id);
-      } else {
-          Object.keys(all).forEach(p => { all[p] = all[p].filter(n => n.id !== id); });
-      }
-      localStorage.setItem('parishNotifications', JSON.stringify(all));
-      return { success: true };
-  };
 
   // --- MARGINAL NOTES ---
   const defaultMarginalNotes = useMemo(() => ({
@@ -337,25 +322,29 @@ export const AppDataProvider = ({ children }) => {
               .replace(/\[NOMBRE_SACERDOTE\]/g, n);
   }, [obtenerNotasAlMargen]);
 
-  // --- DATA GETTERS ---
-  const getBaptisms = (pid) => JSON.parse(localStorage.getItem(`baptisms_${pid}`) || '[]');
-  const getConfirmations = (pid) => JSON.parse(localStorage.getItem(`confirmations_${pid}`) || '[]');
-  const getMatrimonios = (pid) => JSON.parse(localStorage.getItem(`matrimonios_${pid}`) || '[]');
-  const getMisDatosList = (pid) => JSON.parse(localStorage.getItem(`misDatos_${pid}`) || '[]');
-  const getParrocos = (pid) => JSON.parse(localStorage.getItem(`parrocos_${pid}`) || '[]');
-  const getObispos = (pid) => JSON.parse(localStorage.getItem(`obispos_${pid}`) || '[]');
+  const generarNotaAlMargenEstandar = useCallback((pid) => {
+      return obtenerNotasAlMargen(pid)?.estandar || "";
+  }, [obtenerNotasAlMargen]);
+
+  const getBaptisms = useCallback((pid) => JSON.parse(localStorage.getItem(`baptisms_${pid}`) || '[]'), []);
+  const getConfirmations = useCallback((pid) => JSON.parse(localStorage.getItem(`confirmations_${pid}`) || '[]'), []);
+  const getMatrimonios = useCallback((pid) => JSON.parse(localStorage.getItem(`matrimonios_${pid}`) || '[]'), []);
+  const getMisDatosList = useCallback((pid) => JSON.parse(localStorage.getItem(`misDatos_${pid}`) || '[]'), []);
+  const getParrocos = useCallback((pid) => JSON.parse(localStorage.getItem(`parrocos_${pid}`) || '[]'), []);
+  const getObispos = useCallback((pid) => JSON.parse(localStorage.getItem(`obispos_${pid}`) || '[]'), []);
 
   return (
     <AppDataContext.Provider value={{
-        data, currentUser, setCurrentUser,
+        data, loadData, currentUser, setCurrentUser, validateUserCredentials,
         getBaptisms, getConfirmations, getMatrimonios, getMisDatosList, getParrocos, getObispos,
         obtenerNotasAlMargen, saveNotasAlMargen,
-        generarNotaAlMargenAnulada, generarNotaAlMargenNuevaPartida,
-        getParishNotifications, addNotificationToParish, updateNotificationStatus, deleteNotification,
+        generarNotaAlMargenAnulada, generarNotaAlMargenNuevaPartida, generarNotaAlMargenEstandar,
+        getParishNotifications, addNotificationToParish,
         getDioceses, getArchdioceses, createDiocese, createArchdiocese, getVicaries, getDecanates, getChanceries,
         createVicary, createDecanate, createChancery,
         saveData, initSupabaseConnection, supabaseConnected,
-        getDecreeReplacements, getDecreeReplacementByNewBaptismId, createDecreeReplacement,
+        saveBaptismParameters: (params) => { localStorage.setItem('baptismParameters', JSON.stringify(params)); setBaptismParameters(params); return { success: true }; },
+        getBaptismParameters: () => baptismParameters || JSON.parse(localStorage.getItem('baptismParameters')) || {},
         getConceptosAnulacion: (pid) => JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]'),
         addConceptoAnulacion: (item, pid) => {
             const list = JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]');
@@ -368,10 +357,8 @@ export const AppDataProvider = ({ children }) => {
             localStorage.setItem(`conceptosAnulacion_${pid}`, JSON.stringify(list.filter(i => i.id !== id)));
             return { success: true };
         },
-        validateUserCredentials: (u, p) => {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            return users.find(user => sanitizeValue(user.username).toLowerCase().trim() === u.toLowerCase().trim() && user.password === p) || null;
-        }
+        getBaptismCorrections: (pid) => JSON.parse(localStorage.getItem(`baptismCorrections_${pid}`) || '[]'),
+        getDecreeReplacements, getDecreeReplacementByNewBaptismId
     }}>
       {children}
     </AppDataContext.Provider>

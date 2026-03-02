@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { validateUserCredentials, initializeAdminUser } from '@/utils/authUtils';
 import { logAuthEvent } from '@/utils/authLogger';
@@ -17,18 +16,22 @@ export const AuthProvider = ({ children }) => {
 
       const extractId = (val) => {
           if (!val) return '';
-          if (typeof val === 'string' || typeof val === 'number') return String(val);
-          if (typeof val === 'object') return String(val.id || val.parishId || val.dioceseId || '');
-          return '';
+          if (typeof val === 'string') return val;
+          if (typeof val === 'number') return String(val);
+          if (typeof val === 'object') return String(val.id || val.parishId || val.dioceseId || val.value || '');
+          return String(val);
       };
+
+      const pId = extractId(u.parishId || u.parish_id || u.parroquiaId || u.parroquia_id || (u.parish && u.parish.id));
+      const dId = extractId(u.dioceseId || u.diocese_id || u.diocesisId || u.diocesis_id || (u.diocese && u.diocese.id));
 
       return {
           ...u,
           id: extractId(u.id || u.uid),
           username: safeStr(u.username || u.user || u.name),
           role: safeStr(u.role?.name || u.role),
-          parishId: extractId(u.parishId || u.parish_id || u.parroquiaId || (u.parish && u.parish.id)),
-          dioceseId: extractId(u.dioceseId || u.diocese_id || u.diocesisId || (u.diocese && u.diocese.id)),
+          parishId: pId,
+          dioceseId: dId,
           parishName: safeStr(u.parishName || u.parroquia),
           dioceseName: safeStr(u.dioceseName || u.diocesis),
           chancelleryName: safeStr(u.chancelleryName || u.chancilleria)
@@ -37,12 +40,15 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     initializeAdminUser();
-    const stored = localStorage.getItem('currentUser');
-    if (stored) {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
       try {
-        const parsed = JSON.parse(stored);
-        setUser(sanitizeUser(parsed));
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser) {
+            setUser(sanitizeUser(parsedUser));
+        }
       } catch (e) {
+        console.error("Auth session restoration failed", e);
         localStorage.removeItem('currentUser');
       }
     }
@@ -50,36 +56,39 @@ export const AuthProvider = ({ children }) => {
   }, [sanitizeUser]);
 
   const login = (username, password) => {
-    const rawUser = validateUserCredentials(username, password);
-    if (!rawUser) return { success: false, error: 'Usuario o contraseña incorrectos' };
+    try {
+      const rawUser = validateUserCredentials(username, password);
+      if (!rawUser) {
+        return { success: false, error: 'Usuario o contraseña incorrectos' };
+      }
+      const sanitizedUser = sanitizeUser(rawUser);
+      setUser(sanitizedUser);
+      localStorage.setItem('currentUser', JSON.stringify(sanitizedUser));
+      logAuthEvent(sanitizedUser, 'LOGIN_SUCCESS');
 
-    const sanitized = sanitizeUser(rawUser);
-    setUser(sanitized);
-    localStorage.setItem('currentUser', JSON.stringify(sanitized));
-    window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new Event('storage'));
 
-    return {
+      return {
         success: true,
-        user: sanitized,
-        redirectPath: getRedirectPath(sanitized.role)
-    };
+        user: sanitizedUser
+      };
+    } catch (err) {
+      return { success: false, error: err?.message || 'Error durante el inicio de sesión' };
+    }
   };
 
   const logout = () => {
+    if (user) logAuthEvent(user, 'LOGOUT');
     setUser(null);
     localStorage.removeItem('currentUser');
     window.dispatchEvent(new Event('storage'));
   };
 
-  const getRedirectPath = (role) => {
-    const r = String(role || '');
-    switch (r) {
-      case ROLE_TYPES.ADMIN_GENERAL: return '/admin/dashboard';
-      case ROLE_TYPES.DIOCESE: return '/diocese/dashboard';
-      case ROLE_TYPES.PARISH: return '/parish/dashboard';
-      case ROLE_TYPES.CHANCERY: return '/chancery/dashboard';
-      default: return '/';
-    }
+  const hasRole = (allowedRoles) => {
+    if (!user) return false;
+    const userRole = String(user.role || '');
+    const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+    return rolesArray.includes(userRole);
   };
 
   return (
@@ -89,12 +98,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         loading,
         isAuthenticated: !!user,
-        getRedirectPath,
-        hasRole: (allowed) => {
-            if (!user) return false;
-            const current = String(user.role || '');
-            return Array.isArray(allowed) ? allowed.includes(current) : current === allowed;
-        }
+        hasRole
     }}>
       {children}
     </AuthContext.Provider>
@@ -103,6 +107,6 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth error');
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
