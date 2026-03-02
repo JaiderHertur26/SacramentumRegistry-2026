@@ -25,7 +25,9 @@ const ParishNotificationsPage = () => {
         if (user?.parishId) {
             setIsLoading(true);
             const parishNotifs = getParishNotifications(user.parishId);
-            setNotifications(parishNotifs);
+            // Filter out matrimonial notifications as they have their own page (NotificationWarningPage)
+            const officialNotifs = parishNotifs.filter(n => n.type !== 'matrimonial_notification');
+            setNotifications(officialNotifs);
             setIsLoading(false);
         }
     }, [user, getParishNotifications]);

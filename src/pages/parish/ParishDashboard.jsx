@@ -275,31 +275,31 @@ const ParishDashboard = () => {
                     >
                         <div className="relative z-10 flex items-center gap-4">
                             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                                <Church className="w-6 h-6" />
+                                <Church className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex flex-col items-start">
-                                <span className="text-[10px] uppercase tracking-widest font-black opacity-80">Registro</span>
-                                <span className="text-lg font-black tracking-tight">Nuevo Bautismo</span>
+                                <span className="text-[10px] uppercase tracking-widest font-black opacity-80 text-white">Registro</span>
+                                <span className="text-lg font-black tracking-tight text-white">Nuevo Bautismo</span>
                             </div>
                         </div>
-                        <Plus className="w-6 h-6 opacity-30 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10" />
+                        <Plus className="w-6 h-6 opacity-30 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10 text-white" />
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform"></div>
                     </button>
 
                     <button
                         onClick={() => navigate('/parroquia/confirmacion/nuevo')}
-                        className="flex items-center justify-between p-5 bg-gray-900 hover:bg-gray-800 text-white rounded-2xl transition-all shadow-lg hover:shadow-xl group overflow-hidden relative"
+                        className="flex items-center justify-between p-5 bg-indigo-700 hover:bg-indigo-800 text-white rounded-2xl transition-all shadow-lg hover:shadow-xl group overflow-hidden relative"
                     >
                         <div className="relative z-10 flex items-center gap-4">
                             <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center">
-                                <ScrollText className="w-6 h-6" />
+                                <ScrollText className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex flex-col items-start">
-                                <span className="text-[10px] uppercase tracking-widest font-black opacity-60">Registro</span>
-                                <span className="text-lg font-black tracking-tight">Nueva Confirmación</span>
+                                <span className="text-[10px] uppercase tracking-widest font-black opacity-80 text-white">Registro</span>
+                                <span className="text-lg font-black tracking-tight text-white">Nueva Confirmación</span>
                             </div>
                         </div>
-                        <Plus className="w-6 h-6 opacity-20 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10" />
+                        <Plus className="w-6 h-6 opacity-20 group-hover:opacity-100 group-hover:scale-125 transition-all relative z-10 text-white" />
                     </button>
 
                     <button
@@ -312,7 +312,7 @@ const ParishDashboard = () => {
                             </div>
                             <div className="flex flex-col items-start">
                                 <span className="text-[10px] uppercase tracking-widest font-black text-rose-400">Registro</span>
-                                <span className="text-lg font-black tracking-tight">Nuevo Matrimonio</span>
+                                <span className="text-lg font-black tracking-tight text-gray-900">Nuevo Matrimonio</span>
                             </div>
                         </div>
                         <Plus className="w-6 h-6 text-gray-300 group-hover:text-rose-400 group-hover:scale-125 transition-all relative z-10" />

@@ -50,6 +50,7 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
     padrinos,
     ministro,
     notaAlMargen,
+    notaMarginalMatrimonio,
     // Civil Registry Data
     registrySerial,
     registryDate,
@@ -92,6 +93,11 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
   const generateMarginalNote = () => {
       let resultText = "";
       const currentSpanishDate = dateToSpanishLegalText(new Date());
+
+      // 0. NEW: Check if there is a Matrimonial Notification Note
+      if (notaMarginalMatrimonio) {
+          return notaMarginalMatrimonio;
+      }
 
       // 1. Check if this baptism is involved in a correction decree (either as original or new)
       if (dataSource.id) {
