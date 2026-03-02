@@ -109,3 +109,17 @@ const getEmptyPartida = () => ({
     notaMarginalMatrimonio: '',
     parroquiaInfo: {}
 });
+
+/**
+ * Validates the minimum structure required for a baptism record.
+ */
+export const validateBaptismPartidaStructure = (normalizedData) => {
+    const missing = [];
+    if (!normalizedData.nombres && !normalizedData.apellidos) missing.push('Nombres/Apellidos');
+    if (!normalizedData.fechaBautismo) missing.push('Fecha de Bautismo');
+
+    return {
+        isValid: missing.length === 0,
+        missingFields: missing
+    };
+};
