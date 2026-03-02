@@ -115,7 +115,7 @@ import ChanceryReplacementDecreeListPage from '@/pages/chancery/ChanceryReplacem
 /* --- CHANCERY DECREES --- */
 import NewDecreeCorrectionPage from '@/pages/chancery/decree-correction/NewDecreeCorrectionPage';
 import NewDecreeReplacementPage from '@/pages/chancery/decree-replacement/NewDecreeReplacementPage';
-import ChanceryAnnulmentConceptsPage from '@/pages/chancery/decree-annulment/ChanceryAnnulmentConceptsPage';
+import ChanceryAnnulmentConceptsPage from '@/pages/chancery/decree-annulment/AnnulmentConceptsPage';
 
 // NEW CHANCERY COMPONENTS
 import ChanceryDecreeReplacementViewPage from '@/pages/chancery/ChanceryDecreeReplacementViewPage.jsx';
