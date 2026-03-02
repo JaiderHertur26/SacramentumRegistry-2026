@@ -74,16 +74,16 @@ const initializeCollections = () => {
 };
 
 export const AppDataProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(() => {
-      const stored = localStorage.getItem('currentUser');
-      if (!stored) return null;
-      try { return JSON.parse(stored); } catch(e) { return null; }
-  });
-
   const [data, setData] = useState({
     users: [], dioceses: [], vicariates: [], deaneries: [], parishes: [],
     chancelleries: [], sacraments: [], communications: [], catalogs: {},
     chancellors: [], misDatos: [], conceptosAnulacion: [], decreeReplacements: []
+  });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+      const stored = localStorage.getItem('currentUser');
+      if (!stored) return null;
+      try { return JSON.parse(stored); } catch(e) { return null; }
   });
 
   const [baptismParameters, setBaptismParameters] = useState(null);
@@ -221,7 +221,7 @@ export const AppDataProvider = ({ children }) => {
 
   const generarNotaAlMargenAnulada = useCallback((p, d, pid) => {
       const t = obtenerNotasAlMargen(pid)?.porCorreccion?.anulada || "";
-      return t.replace(/\[FECHA_DECRETO\]/g, d?.fecha ? convertDateToSpanishText(d.fecha) : "___")
+      return t.replace(/\[FECHA_DECRETO\]/g, d?.fecha ? d.fecha : "___")
               .replace(/\[NUMERO_DECRETO\]/g, d?.numero || "___")
               .replace(/\[LIBRO_NUEVA\]/g, p?.libro || "___")
               .replace(/\[FOLIO_NUEVA\]/g, p?.folio || "___")
@@ -232,7 +232,7 @@ export const AppDataProvider = ({ children }) => {
       const t = obtenerNotasAlMargen(pid)?.porCorreccion?.nuevaPartida || "";
       let n = typeof s === 'string' ? s.toUpperCase() : (s?.nombre ? `${s.nombre} ${s.apellido}`.trim().toUpperCase() : "___");
       return t.replace(/\[NUMERO_DECRETO\]/g, d?.numero || "___")
-              .replace(/\[FECHA_DECRETO\]/g, d?.fecha ? convertDateToSpanishText(d.fecha) : "___")
+              .replace(/\[FECHA_DECRETO\]/g, d?.fecha || "___")
               .replace(/\[OFICINA_DECRETO\]/g, d?.oficina || "CANCILLERÍA")
               .replace(/\[LIBRO_ANULADA\]/g, p?.libro || "___")
               .replace(/\[FOLIO_ANULADA\]/g, p?.folio || "___")
@@ -302,6 +302,27 @@ export const AppDataProvider = ({ children }) => {
       return { success: true, data: newDecanate };
   }, []);
 
+  const createVicaryEntity = useCallback((vicaryData) => {
+      const current = JSON.parse(localStorage.getItem('vicariates') || '[]');
+      const newVicary = { ...vicaryData, id: generateUUID(), createdAt: new Date().toISOString() };
+      saveData('vicariates', [...current, newVicary]);
+      return { success: true, data: newVicary };
+  }, []);
+
+  const createDecanateEntity = useCallback((decanateData) => {
+      const current = JSON.parse(localStorage.getItem('deaneries') || '[]');
+      const newDecanate = { ...decanateData, id: generateUUID(), createdAt: new Date().toISOString() };
+      saveData('deaneries', [...current, newDecanate]);
+      return { success: true, data: newDecanate };
+  }, []);
+
+  const createChanceryEntity = useCallback((chanceryData) => {
+      const current = JSON.parse(localStorage.getItem('chancelleries') || '[]');
+      const newChancery = { ...chanceryData, id: generateUUID(), createdAt: new Date().toISOString() };
+      saveData('chancelleries', [...current, newChancery]);
+      return { success: true, data: newChancery };
+  }, []);
+
   // --- NOTIFICATIONS ---
   const getParishNotifications = useCallback((pid) => {
       const all = JSON.parse(localStorage.getItem('parishNotifications') || '{}');
@@ -355,20 +376,17 @@ export const AppDataProvider = ({ children }) => {
 
   return (
     <AppDataContext.Provider value={{
-        data, loadData, currentUser, setCurrentUser,
+        data, loadData, currentUser, setCurrentUser, validateUserCredentials,
         getBaptisms, getConfirmations, getMatrimonios, getMisDatosList, getParrocos, getObispos,
         obtenerNotasAlMargen, saveNotasAlMargen,
         generarNotaAlMargenAnulada, generarNotaAlMargenNuevaPartida, generarNotaAlMargenEstandar,
         getParishNotifications, addNotificationToParish,
         getDecreeReplacements, getDecreeReplacementByNewBaptismId, createDecreeReplacement,
         createDiocese, createParish, createVicary, createDecanate,
+        createVicaryEntity, createDecanateEntity, createChanceryEntity,
         saveBaptismParameters, getBaptismParameters,
         createUniversalBackup, getUniversalBackups, restoreUniversalBackup, deleteUniversalBackup,
         saveData, initSupabaseConnection: async () => ({ success: true }), supabaseConnected,
-        validateUserCredentials: (u, p) => {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            return users.find(user => sanitizeValue(user.username).toLowerCase().trim() === u.toLowerCase().trim() && user.password === p) || null;
-        },
         getConceptosAnulacion: (pid) => JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]'),
         addConceptoAnulacion: (item, pid) => {
             const list = JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]');
@@ -382,4 +400,14 @@ export const AppDataProvider = ({ children }) => {
             return { success: true };
         },
         getBaptismCorrections: (pid) => JSON.parse(localStorage.getItem(`baptismCorrections_${pid}`) || '[]')
-    }}\u003e\n      {children}\n    \u003c/AppDataContext.Provider\u003e\n  );\n};\n\nexport const useAppData \u003d () \u003d\u003e {\n  const context \u003d useContext(AppDataContext);\n  if (!context) throw new Error(\u0027useAppData error\u0027);\n  return context;\n};\n
+    }}>
+      {children}
+    </AppDataContext.Provider>
+  );
+};
+
+export const useAppData = () => {
+  const context = useContext(AppDataContext);
+  if (!context) throw new Error('useAppData error');
+  return context;
+};
