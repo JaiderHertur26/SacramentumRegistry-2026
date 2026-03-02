@@ -125,10 +125,11 @@ export const AppDataProvider = ({ children }) => {
 
   const validateUserCredentials = (username, password) => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    return users.find(u => {
+    const foundUser = users.find(u => {
       const uName = sanitizeValue(u.username);
       return uName.toLowerCase().trim() === username.toLowerCase().trim() && u.password === password;
-    }) || null;
+    });
+    return foundUser || null;
   };
 
   const initSupabaseConnection = async (url, key) => {
@@ -172,7 +173,7 @@ export const AppDataProvider = ({ children }) => {
   }), []);
 
   const obtenerNotasAlMargen = useCallback((parishId) => {
-      console.log("AppDataContext - obtenerNotasAlMargen for:", parishId);
+      console.log("AppDataContext - obtenerNotasAlMargen called for:", parishId);
       if (!parishId) return defaultMarginalNotes;
       const key = `notasAlMargen_${String(parishId)}`;
       const stored = localStorage.getItem(key);
@@ -193,11 +194,14 @@ export const AppDataProvider = ({ children }) => {
   const saveNotasAlMargen = useCallback((notesToSave, parishId) => {
       console.log("AppDataContext - saveNotasAlMargen execution", { parishId, notesToSave });
       if (!parishId) {
-          return { success: false, message: "ID de parroquia no encontrado." };
+          return { success: false, message: "No se identificó la parroquia activa." };
       }
       try {
           const key = `notasAlMargen_${String(parishId)}`;
-          localStorage.setItem(key, JSON.stringify(notesToSave));
+          // We perform a merge with existing data to prevent accidental wiping of other sections
+          const existing = JSON.parse(localStorage.getItem(key) || '{}');
+          const merged = { ...existing, ...notesToSave };
+          localStorage.setItem(key, JSON.stringify(merged));
           return { success: true };
       } catch (e) {
           console.error("AppDataContext - save ERROR", e);

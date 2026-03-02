@@ -4,7 +4,7 @@ import { useAppData } from '@/context/AppDataContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Save, Check, Heart, AlertCircle } from 'lucide-react';
+import { Save, Check, Heart, FileText, FileUp, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { convertDateToSpanishTextNatural } from '@/utils/dateTimeFormatters';
 
@@ -38,17 +38,12 @@ const MarginalNotesTab = () => {
         standard: false
     });
 
-    // 1. Diagnostics on Mount
+    // 1. Load ALL data on mount and user change
     useEffect(() => {
-        console.log("MarginalNotesTab - MOUNTED. User context:", user);
-    }, [user]);
-
-    // 2. Load data
-    useEffect(() => {
-        const parishId = user?.parishId || user?.parish_id;
-
-        if (parishId) {
-            const data = obtenerNotasAlMargen(parishId);
+        const pId = user?.parishId || user?.parish_id || user?.parroquiaId;
+        if (pId) {
+            console.log("MarginalNotesTab - Loading all notes for:", pId);
+            const data = obtenerNotasAlMargen(pId);
             setNotes({
                 porCorreccion: data.porCorreccion || { anulada: '', nuevaPartida: '' },
                 porReposicion: data.porReposicion || { nuevaPartida: '' },
@@ -58,7 +53,7 @@ const MarginalNotesTab = () => {
         }
     }, [user, obtenerNotasAlMargen]);
 
-    // 3. Previews
+    // 2. Refresh previews
     useEffect(() => {
         let sampleDate = "____________________";
         try {
@@ -66,6 +61,35 @@ const MarginalNotesTab = () => {
         } catch (e) {}
 
         const newPreviews = { ...previews };
+
+        if (notes.porCorreccion.anulada) {
+            newPreviews.anulada = notes.porCorreccion.anulada
+                .replace(/\[FECHA_DECRETO\]/g, "OCHO DE ABRIL DE DOS MIL VEINTICUATRO")
+                .replace(/\[NUMERO_DECRETO\]/g, "0357")
+                .replace(/\[LIBRO_NUEVA\]/g, "0003")
+                .replace(/\[FOLIO_NUEVA\]/g, "0001")
+                .replace(/\[NUMERO_PARTIDA_NUEVA\]/g, "0002")
+                .replace(/\[FECHA_EXPEDICION\]/g, sampleDate);
+        }
+
+        if (notes.porCorreccion.nuevaPartida) {
+            newPreviews.nuevaPartida = notes.porCorreccion.nuevaPartida
+                .replace(/\[NUMERO_DECRETO\]/g, "1957")
+                .replace(/\[FECHA_DECRETO\]/g, "DIEZ DE ABRIL DE DOS MIL VEINTITRÉS")
+                .replace(/\[OFICINA_DECRETO\]/g, "CANCILLERÍA")
+                .replace(/\[LIBRO_ANULADA\]/g, "001")
+                .replace(/\[FOLIO_ANULADA\]/g, "039")
+                .replace(/\[NUMERO_PARTIDA_ANULADA\]/g, "0779")
+                .replace(/\[NOMBRE_SACERDOTE\]/g, "PADRE JAIDER HERRERA")
+                .replace(/\[FECHA_EXPEDICION\]/g, sampleDate);
+        }
+
+        if (notes.porReposicion.nuevaPartida) {
+            newPreviews.reposicion = notes.porReposicion.nuevaPartida
+                .replace(/\[NUMERO_DECRETO\]/g, "0842")
+                .replace(/\[FECHA_DECRETO\]/g, "DOCE DE ENERO DE DOS MIL VEINTICUATRO")
+                .replace(/\[FECHA_EXPEDICION\]/g, sampleDate);
+        }
 
         if (notes.porNotificacionMatrimonial) {
             newPreviews.matrimonial = notes.porNotificacionMatrimonial
@@ -79,7 +103,10 @@ const MarginalNotesTab = () => {
                 .replace(/\[NUMERO_MAT\]/g, "0123");
         }
 
-        // (Other previews simplified for diagnostic version)
+        if (notes.estandar) {
+            newPreviews.standard = notes.estandar.replace(/\[FECHA_EXPEDICION\]/g, sampleDate);
+        }
+
         setPreviews(newPreviews);
     }, [notes]);
 
@@ -88,62 +115,44 @@ const MarginalNotesTab = () => {
         setTimeout(() => setSavedStates(prev => ({ ...prev, [section]: false })), 3000);
     };
 
-    // 4. THE ACTION HANDLER WITH ALERTS
     const handleSave = (section) => {
-        alert("DIAGNÓSTICO PASO 1: Se presionó el botón de guardado para: " + section);
-
-        const parishId = user?.parishId || user?.parish_id;
-        console.log("MarginalNotesTab - Parish ID detected:", parishId);
-
-        if (!parishId) {
-            alert("DIAGNÓSTICO ERROR: No se encontró parishId en el usuario logueado. El objeto user es: " + JSON.stringify(user));
+        const pId = user?.parishId || user?.parish_id || user?.parroquiaId;
+        if (!pId) {
+            toast({ title: "Error", description: "No se identificó la parroquia.", variant: "destructive" });
             return;
         }
 
-        if (!notes.porNotificacionMatrimonial) {
-            alert("DIAGNÓSTICO AVISO: El campo de Notificación Matrimonial está vacío.");
-        }
-
-        try {
-            alert("DIAGNÓSTICO PASO 2: Enviando datos al sistema de almacenamiento...");
-            const result = saveNotasAlMargen(notes, parishId);
-
-            if (result && result.success) {
-                alert("DIAGNÓSTICO ÉXITO: El sistema reporta guardado correcto en localStorage.");
-                toast({ title: "¡Nota Guardada!", className: "bg-emerald-600 text-white" });
-                showSuccess(section);
-            } else {
-                alert("DIAGNÓSTICO FALLO: El sistema de guardado devolvió un error: " + (result?.message || "Desconocido"));
-            }
-        } catch (error) {
-            alert("DIAGNÓSTICO CRÍTICO: Ocurrió una excepción de JavaScript: " + error.message);
-            console.error(error);
+        // We send the whole notes object to ensure consistent saving
+        const result = saveNotasAlMargen(notes, String(pId));
+        if (result.success) {
+            toast({ title: "¡Guardado con éxito!", className: "bg-green-600 text-white font-bold" });
+            showSuccess(section);
+        } else {
+            toast({ title: "Error al guardar", description: result.message, variant: "destructive" });
         }
     };
 
     return (
         <div className="space-y-8 py-6 px-4 max-w-5xl mx-auto">
-            <div className="bg-amber-100 p-4 rounded-lg border border-amber-300 text-amber-900 text-xs font-bold mb-4">
-                MODO DIAGNÓSTICO ACTIVO: Si el botón no muestra mensajes de alerta, por favor revise la consola (F12).
-            </div>
 
-            {/* SECCIÓN NOTIFICACIÓN MATRIMONIAL */}
-            <div className="bg-white rounded-2xl border-2 border-rose-100 shadow-sm p-8">
+            {/* 1. NOTIFICACIÓN MATRIMONIAL */}
+            <div className="bg-white rounded-2xl border-2 border-rose-100 shadow-sm p-8 transition-all hover:shadow-md">
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-3">
                         <Heart className="w-10 h-10 text-rose-600" />
                         <div>
-                            <h3 className="text-xl font-black text-gray-900">Notificación Matrimonial</h3>
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Parroquia actual: {user?.parishName || "Cargando..."} (ID: {user?.parishId || "N/A"})
-                            </p>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Notificación Matrimonial</h3>
+                            <p className="text-xs font-bold text-gray-500">Nota para el bautizado notificado como casado</p>
                         </div>
                     </div>
-                    {savedStates.matrimonial && <span className="text-emerald-600 font-bold">✓ Guardado</span>}
+                    {savedStates.matrimonial && <span className="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold animate-bounce">✓ Cambios Guardados</span>}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-4">
+                        <div className="bg-rose-50 p-3 rounded-lg text-[10px] text-rose-700 font-bold border border-rose-100">
+                            <strong>Variables:</strong> [FECHA_NOTIFICACION], [FECHA_MATRIMONIO], [PARROQUIA_MATRIMONIO], [DIOCESIS_MATRIMONIO], [NOMBRE_CONYUGE], [LIBRO_MAT], [FOLIO_MAT], [NUMERO_MAT]
+                        </div>
                         <textarea
                             value={notes.porNotificacionMatrimonial}
                             onChange={(e) => setNotes({ ...notes, porNotificacionMatrimonial: e.target.value })}
@@ -152,25 +161,143 @@ const MarginalNotesTab = () => {
                         />
                     </div>
                     <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200">
-                        <span className="text-[10px] font-black text-gray-400 uppercase">Vista Previa</span>
-                        <p className="text-xs text-gray-800 font-bold italic mt-4">
-                            {previews.matrimonial || "Escriba para ver la vista previa..."}
+                        <span className="text-[10px] font-black text-gray-400 uppercase">Vista Previa Real</span>
+                        <p className="text-xs text-gray-800 font-bold italic mt-4 leading-relaxed">
+                            {previews.matrimonial || "Escriba texto para generar vista previa..."}
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-8 flex justify-end">
                     <button
-                        type="button"
                         onClick={() => handleSave('matrimonial')}
-                        className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-widest px-10 py-4 rounded-xl shadow-lg active:scale-95"
+                        className="bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-widest px-10 py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
                     >
-                        GUARDAR NOTA DE MATRIMONIO
+                        <Save className="w-4 h-4" /> GUARDAR NOTA DE MATRIMONIO
                     </button>
                 </div>
             </div>
 
-            {/* Las otras secciones se mantienen igual para no afectar la interfaz */}
+            {/* 2. POR CORRECCIÓN (ANULACIÓN) */}
+            <div className="bg-white rounded-2xl border-2 border-blue-100 shadow-sm p-8 transition-all hover:shadow-md">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                        <FileText className="w-10 h-10 text-blue-600" />
+                        <div>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Por Corrección (Anulación)</h3>
+                            <p className="text-xs font-bold text-gray-500">Notas legales para partidas anuladas y nuevas</p>
+                        </div>
+                    </div>
+                    {savedStates.correction && <span className="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold animate-bounce">✓ Cambios Guardados</span>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Nota para Partida Anulada</label>
+                        <textarea
+                            value={notes.porCorreccion.anulada}
+                            onChange={(e) => setNotes({ ...notes, porCorreccion: { ...notes.porCorreccion, anulada: e.target.value } })}
+                            className="w-full min-h-[140px] p-4 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none text-sm font-bold text-gray-700 font-mono"
+                        />
+                        <div className="p-3 bg-gray-50 rounded-lg text-[10px] text-gray-500 font-bold border border-gray-100 italic">
+                            {previews.anulada}
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Nota para Nueva Partida</label>
+                        <textarea
+                            value={notes.porCorreccion.nuevaPartida}
+                            onChange={(e) => setNotes({ ...notes, porCorreccion: { ...notes.porCorreccion, nuevaPartida: e.target.value } })}
+                            className="w-full min-h-[140px] p-4 border-2 border-gray-100 rounded-xl focus:border-blue-300 outline-none text-sm font-bold text-gray-700 font-mono"
+                        />
+                        <div className="p-3 bg-gray-50 rounded-lg text-[10px] text-gray-500 font-bold border border-gray-100 italic">
+                            {previews.nuevaPartida}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-8 flex justify-end">
+                    <button
+                        onClick={() => handleSave('correction')}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest px-10 py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+                    >
+                        <Save className="w-4 h-4" /> GUARDAR NOTAS DE CORRECCIÓN
+                    </button>
+                </div>
+            </div>
+
+            {/* 3. POR REPOSICIÓN */}
+            <div className="bg-white rounded-2xl border-2 border-amber-100 shadow-sm p-8 transition-all hover:shadow-md">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                        <FileUp className="w-10 h-10 text-amber-600" />
+                        <div>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Por Reposición</h3>
+                            <p className="text-xs font-bold text-gray-500">Nota para partidas creadas por reposición</p>
+                        </div>
+                    </div>
+                    {savedStates.reposicion && <span className="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold animate-bounce">✓ Cambios Guardados</span>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <textarea
+                            value={notes.porReposicion.nuevaPartida}
+                            onChange={(e) => setNotes({ ...notes, porReposicion: { nuevaPartida: e.target.value } })}
+                            className="w-full min-h-[120px] p-4 border-2 border-gray-100 rounded-xl focus:border-amber-300 outline-none text-sm font-bold text-gray-700"
+                        />
+                    </div>
+                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 flex items-center">
+                        <p className="text-xs text-gray-800 font-bold italic leading-relaxed">{previews.reposicion}</p>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <button
+                        onClick={() => handleSave('reposicion')}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-black text-xs uppercase tracking-widest px-10 py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+                    >
+                        <Save className="w-4 h-4" /> GUARDAR NOTA DE REPOSICIÓN
+                    </button>
+                </div>
+            </div>
+
+            {/* 4. NOTA ESTÁNDAR */}
+            <div className="bg-white rounded-2xl border-2 border-emerald-100 shadow-sm p-8 transition-all hover:shadow-md">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                        <Info className="w-10 h-10 text-emerald-600" />
+                        <div>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Nota Estándar</h3>
+                            <p className="text-xs font-bold text-gray-500">Nota al margen por defecto para partidas comunes</p>
+                        </div>
+                    </div>
+                    {savedStates.standard && <span className="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold animate-bounce">✓ Cambios Guardados</span>}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <textarea
+                            value={notes.estandar}
+                            onChange={(e) => setNotes({ ...notes, estandar: e.target.value })}
+                            className="w-full min-h-[120px] p-4 border-2 border-gray-100 rounded-xl focus:border-emerald-300 outline-none text-sm font-bold text-gray-700"
+                        />
+                    </div>
+                    <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 flex items-center">
+                         <p className="text-xs text-gray-800 font-bold italic leading-relaxed">{previews.standard}</p>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex justify-end">
+                    <button
+                        onClick={() => handleSave('standard')}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest px-10 py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center gap-2"
+                    >
+                        <Save className="w-4 h-4" /> GUARDAR NOTA ESTÁNDAR
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };
