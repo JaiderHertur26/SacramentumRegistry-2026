@@ -9,6 +9,7 @@ import { separateNewAndDuplicateConfirmations } from '@/utils/confirmationJsonMa
 import { separateNewAndDuplicateBaptisms } from '@/utils/baptismJsonMapper';
 import { separateNewAndDuplicateDecrees } from '@/utils/decreeJsonMapper';
 import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
+import { updateBaptismPartidaMarginalNote } from '@/utils/updateBaptismPartidaMarginalNote.js';
 import { logAuthEvent } from '@/utils/authLogger';
 import { ROLE_TYPES } from '@/config/supabaseConfig';
 import { supabase, isSupabaseConfigured } from '@/lib/customSupabaseClient';
@@ -40,6 +41,18 @@ const sanitizeValue = (val, fallback = '') => {
   return String(val);
 };
 
+const sanitizeUser = (u) => {
+  if (!u) return null;
+  return {
+    ...u,
+    username: sanitizeValue(u.username, 'Usuario'),
+    role: sanitizeValue(u.role, 'guest'),
+    parishName: sanitizeValue(u.parishName, ''),
+    dioceseName: sanitizeValue(u.dioceseName, ''),
+    chancelleryName: sanitizeValue(u.chancelleryName, '')
+  };
+};
+
 const initializeCollections = () => {
   const collections = [
     'users', 'dioceses', 'vicariates', 'deaneries', 'parishes',
@@ -61,15 +74,16 @@ const initializeCollections = () => {
 };
 
 export const AppDataProvider = ({ children }) => {
+  const [currentUser, setCurrentUser] = useState(() => {
+      const stored = localStorage.getItem('currentUser');
+      if (!stored) return null;
+      try { return JSON.parse(stored); } catch(e) { return null; }
+  });
+
   const [data, setData] = useState({
     users: [], dioceses: [], vicariates: [], deaneries: [], parishes: [],
     chancelleries: [], sacraments: [], communications: [], catalogs: {},
     chancellors: [], misDatos: [], conceptosAnulacion: [], decreeReplacements: []
-  });
-
-  const [currentUser, setCurrentUser] = useState(() => {
-      const stored = localStorage.getItem('currentUser');
-      return stored ? JSON.parse(stored) : null;
   });
 
   const [baptismParameters, setBaptismParameters] = useState(null);
@@ -82,7 +96,7 @@ export const AppDataProvider = ({ children }) => {
     const replacementsKey = entityId ? `decreeReplacements_${entityId}` : 'decreeReplacements';
 
     setData({
-      users: rawUsers,
+      users: rawUsers.map(sanitizeUser),
       dioceses: JSON.parse(localStorage.getItem('dioceses') || '[]'),
       vicariates: JSON.parse(localStorage.getItem('vicariates') || '[]'),
       deaneries: JSON.parse(localStorage.getItem('deaneries') || '[]'),
@@ -129,6 +143,36 @@ export const AppDataProvider = ({ children }) => {
   const saveData = (key, value) => {
     localStorage.setItem(key, JSON.stringify(value));
     setData(prev => ({ ...prev, [key]: value }));
+  };
+
+  const validateUserCredentials = (username, password) => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const foundUser = users.find(u => {
+      const uName = sanitizeValue(u.username);
+      return uName.toLowerCase().trim() === username.toLowerCase().trim() && u.password === password;
+    });
+    return foundUser ? sanitizeUser(foundUser) : null;
+  };
+
+  const initSupabaseConnection = async (url, key) => {
+    try {
+      if (url) localStorage.setItem('supabase_url', url);
+      if (key) localStorage.setItem('supabase_key', key);
+      if (!supabase || !isSupabaseConfigured()) {
+        setSupabaseConnected(false);
+        return { success: false, message: 'Supabase no configurado.' };
+      }
+      const { error } = await supabase.from('app_state').select('key_name').limit(1);
+      if (error) {
+        setSupabaseConnected(false);
+        return { success: false, message: error.message };
+      }
+      setSupabaseConnected(true);
+      return { success: true, message: 'Conexión Supabase activa.' };
+    } catch (err) {
+      setSupabaseConnected(false);
+      return { success: false, message: err?.message || 'Error de conexión.' };
+    }
   };
 
   // --- MARGINAL NOTES ENGINE ---
@@ -320,15 +364,22 @@ export const AppDataProvider = ({ children }) => {
         createDiocese, createParish, createVicary, createDecanate,
         saveBaptismParameters, getBaptismParameters,
         createUniversalBackup, getUniversalBackups, restoreUniversalBackup, deleteUniversalBackup,
-        saveData, initSupabaseConnection: async () => ({ success: true }), supabaseConnected
-    }}>
-      {children}
-    </AppDataContext.Provider>
-  );
-};
-
-export const useAppData = () => {
-  const context = useContext(AppDataContext);
-  if (!context) throw new Error('useAppData must be used within AppDataProvider');
-  return context;
-};
+        saveData, initSupabaseConnection: async () => ({ success: true }), supabaseConnected,
+        validateUserCredentials: (u, p) => {
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            return users.find(user => sanitizeValue(user.username).toLowerCase().trim() === u.toLowerCase().trim() && user.password === p) || null;
+        },
+        getConceptosAnulacion: (pid) => JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]'),
+        addConceptoAnulacion: (item, pid) => {
+            const list = JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]');
+            const newItem = { ...item, id: generateUUID(), createdAt: new Date().toISOString() };
+            localStorage.setItem(`conceptosAnulacion_${pid}`, JSON.stringify([...list, newItem]));
+            return { success: true, data: newItem };
+        },
+        deleteConceptoAnulacion: (id, pid) => {
+            const list = JSON.parse(localStorage.getItem(`conceptosAnulacion_${pid}`) || '[]');
+            localStorage.setItem(`conceptosAnulacion_${pid}`, JSON.stringify(list.filter(i => i.id !== id)));
+            return { success: true };
+        },
+        getBaptismCorrections: (pid) => JSON.parse(localStorage.getItem(`baptismCorrections_${pid}`) || '[]')
+    }}\u003e\n      {children}\n    \u003c/AppDataContext.Provider\u003e\n  );\n};\n\nexport const useAppData \u003d () \u003d\u003e {\n  const context \u003d useContext(AppDataContext);\n  if (!context) throw new Error(\u0027useAppData error\u0027);\n  return context;\n};\n
