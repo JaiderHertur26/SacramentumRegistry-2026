@@ -115,7 +115,7 @@ import ChanceryReplacementDecreeListPage from '@/pages/chancery/ChanceryReplacem
 /* --- CHANCERY DECREES --- */
 import NewDecreeCorrectionPage from '@/pages/chancery/decree-correction/NewDecreeCorrectionPage';
 import NewDecreeReplacementPage from '@/pages/chancery/decree-replacement/NewDecreeReplacementPage';
-import ChanceryAnnulmentConceptsPage from '@/pages/chancery/decree-annulment/AnnulmentConceptsPage';
+import ChanceryAnnulmentConceptsPage from '@/pages/chancery/decree-annulment/ChanceryAnnulmentConceptsPage';
 
 // NEW CHANCERY COMPONENTS
 import ChanceryDecreeReplacementViewPage from '@/pages/chancery/ChanceryDecreeReplacementViewPage.jsx';
@@ -309,12 +309,12 @@ const AppContent = () => {
 ========================= */
 export default function App() {
     return (
-        <Router>
+        <AuthProvider>
             <AppDataProvider>
-                <AuthProvider>
+                <Router>
                     <AppContent />
-                </AuthProvider>
+                </Router>
             </AppDataProvider>
-        </Router>
+        </AuthProvider>
     );
 }
