@@ -127,15 +127,13 @@ const MatrimonioNewPage = () => {
       }
   }, [user]);
 
+  // SOLUCIÓN: Programación defensiva para evitar TypeError
   useEffect(() => {
-    if (user?.parishId || user?.dioceseId) {
-        // Verificamos si la función existe antes de ejecutarla
-        const list = typeof getCiudadesList === 'function' 
-            ? getCiudadesList(user.parishId || user.dioceseId) 
-            : [];
-        setCities(list);
-    }
-}, [user, getCiudadesList]);
+      if (user?.parishId || user?.dioceseId) {
+          const list = typeof getCiudadesList === 'function' 
+              ? getCiudadesList(user.parishId || user.dioceseId) 
+              : [];
+          setCities(list);
       }
   }, [user, getCiudadesList]);
 
@@ -547,7 +545,7 @@ const MatrimonioNewPage = () => {
                                     <input type="text" name="novioNombres" value={formData.novioNombres} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-200 outline-none uppercase" />
                                 </div>
                             </div>
-                            {/* ...Rest of Novio inputs... (Kept as is but truncated in thought for brevity, full file in output) */}
+                            
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Padre</label>
@@ -636,7 +634,7 @@ const MatrimonioNewPage = () => {
                                     <input type="text" name="noviaNombres" value={formData.noviaNombres} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-pink-200 outline-none uppercase" />
                                 </div>
                             </div>
-                            {/* ...Rest of Novia inputs... */}
+                            
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Padre</label>
@@ -820,7 +818,7 @@ const MatrimonioNewPage = () => {
 
             <SearchBaptismPartidaModal 
                 isOpen={isSearchModalOpen}
-                onClose={handleSelectPartida}
+                onClose={handleCloseSearch} // SOLUCIÓN: Cambiado a handleCloseSearch en lugar de handleSelectPartida
                 onSelectPartida={handleSelectPartida}
             />
         </motion.div>

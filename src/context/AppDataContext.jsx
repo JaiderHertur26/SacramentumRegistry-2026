@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
     generateUUID,
@@ -249,6 +248,10 @@ export const AppDataProvider = ({ children }) => {
   const getMisDatosList = useCallback((pid) => JSON.parse(localStorage.getItem(`misDatos_${pid}`) || '[]'), []);
   const getParrocos = useCallback((pid) => JSON.parse(localStorage.getItem(`parrocos_${pid}`) || '[]'), []);
   const getObispos = useCallback((pid) => JSON.parse(localStorage.getItem(`obispos_${pid}`) || '[]'), []);
+  
+  // SOLUCIÓN: Nuevos Getters para evitar "is not a function"
+  const getCiudadesList = useCallback((pid) => JSON.parse(localStorage.getItem(`ciudades_${pid}`) || '[]'), []);
+  const getConfirmationParameters = useCallback((pid) => JSON.parse(localStorage.getItem(`confirmationParameters_${pid}`) || '{}'), []);
 
   // --- DECREE REPLACEMENT ---
   const getDecreeReplacements = useCallback((pid) => JSON.parse(localStorage.getItem(`decreeReplacements_${pid}`) || '[]'), []);
@@ -378,6 +381,11 @@ export const AppDataProvider = ({ children }) => {
     <AppDataContext.Provider value={{
         data, loadData, currentUser, setCurrentUser, validateUserCredentials,
         getBaptisms, getConfirmations, getMatrimonios, getMisDatosList, getParrocos, getObispos,
+        
+        // EXPORTACIÓN DE LAS FUNCIONES NUEVAS PARA EVITAR EL ERROR BLANCO
+        getCiudadesList,
+        getConfirmationParameters,
+        
         obtenerNotasAlMargen, saveNotasAlMargen,
         generarNotaAlMargenAnulada, generarNotaAlMargenNuevaPartida, generarNotaAlMargenEstandar,
         getParishNotifications, addNotificationToParish,

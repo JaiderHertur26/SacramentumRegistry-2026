@@ -133,10 +133,10 @@ const ConfirmationNewPage = () => {
               city: parishCity
           });
 
-          // 2. Load Parameters for Numbering
-	  const params = typeof getConfirmationParameters === 'function' 
-          ? getConfirmationParameters(contextId) 
-          : {};
+          // SOLUCIÓN: Load Parameters for Numbering con programación defensiva
+          const params = typeof getConfirmationParameters === 'function' 
+              ? getConfirmationParameters(contextId) 
+              : {};
           const nextNum = params?.ordinarioNumero || '1';
 
           setFormData(prev => ({ 
