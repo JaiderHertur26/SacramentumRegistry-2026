@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -40,17 +39,38 @@ const ParishDashboard = () => {
     return 0;
   };
 
+  // Función segura para leer arreglos desde el localStorage
+  const safeParse = (key) => {
+    try {
+        const val = JSON.parse(localStorage.getItem(key));
+        return Array.isArray(val) ? val : [];
+    } catch {
+        return [];
+    }
+  };
+
+  // Función para determinar la ruta correcta según el estado y tipo de sacramento
+  const getActionRoute = (sacramento, isPending) => {
+    const rutaBase = sacramento === 'Confirmación' ? 'confirmacion' : sacramento.toLowerCase();
+    
+    return isPending 
+        ? `/parroquia/${rutaBase}/sentar-registros` 
+        : `/parroquia/${rutaBase}/editar`; 
+  };
+
   const updateDashboardData = () => {
     if (!user || !user.parishId) return;
 
-    const bSeated = getBaptisms(user.parishId);
-    const cSeated = getConfirmations(user.parishId);
-    const mSeated = getMatrimonios(user.parishId);
-    const mDatos = getMisDatosList(user.parishId);
+    // Aseguramos que siempre recibimos un array con el fallback || []
+    const bSeated = getBaptisms(user.parishId) || [];
+    const cSeated = getConfirmations(user.parishId) || [];
+    const mSeated = getMatrimonios(user.parishId) || [];
+    const mDatos = getMisDatosList(user.parishId) || [];
 
-    const bPending = JSON.parse(localStorage.getItem(`pendingBaptisms_${user.parishId}`) || '[]');
-    const cPending = JSON.parse(localStorage.getItem(`pendingConfirmations_${user.parishId}`) || '[]');
-    const mPending = JSON.parse(localStorage.getItem(`pendingMatrimonios_${user.parishId}`) || '[]');
+    // Extracción segura de pendientes
+    const bPending = safeParse(`pendingBaptisms_${user.parishId}`);
+    const cPending = safeParse(`pendingConfirmations_${user.parishId}`);
+    const mPending = safeParse(`pendingMatrimonios_${user.parishId}`);
 
     setStats({
       baptisms: bSeated.length,
@@ -168,8 +188,9 @@ const ParishDashboard = () => {
         header: 'Acción',
         render: (row) => (
             <button
-                onClick={() => navigate(row.isPending ? `/parroquia/${row.sacramento.toLowerCase()}/sentar` : `/parroquia/${row.sacramento.toLowerCase()}/ver/${row.id}`)}
+                onClick={() => navigate(getActionRoute(row.sacramento, row.isPending))}
                 className="text-gray-500 hover:text-[#D4AF37] transition-colors p-1"
+                title="Gestionar Registro"
             >
                 <ArrowUpRight className="w-5 h-5" />
             </button>
