@@ -128,9 +128,14 @@ const MatrimonioNewPage = () => {
   }, [user]);
 
   useEffect(() => {
-      if (user?.parishId || user?.dioceseId) {
-          const list = getCiudadesList(user.parishId || user.dioceseId);
-          setCities(list);
+    if (user?.parishId || user?.dioceseId) {
+        // Verificamos si la función existe antes de ejecutarla
+        const list = typeof getCiudadesList === 'function' 
+            ? getCiudadesList(user.parishId || user.dioceseId) 
+            : [];
+        setCities(list);
+    }
+}, [user, getCiudadesList]);
       }
   }, [user, getCiudadesList]);
 

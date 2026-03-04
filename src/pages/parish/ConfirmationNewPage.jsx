@@ -134,7 +134,9 @@ const ConfirmationNewPage = () => {
           });
 
           // 2. Load Parameters for Numbering
-          const params = getConfirmationParameters(contextId);
+	  const params = typeof getConfirmationParameters === 'function' 
+          ? getConfirmationParameters(contextId) 
+          : {};
           const nextNum = params?.ordinarioNumero || '1';
 
           setFormData(prev => ({ 

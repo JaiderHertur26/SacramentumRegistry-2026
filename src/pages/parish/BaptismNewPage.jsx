@@ -108,11 +108,14 @@ const BaptismNewPage = () => {
   }, [user, getMisDatosList]);
 
   useEffect(() => {
-      if (user?.parishId || user?.dioceseId) {
-          const list = getCiudadesList(user.parishId || user.dioceseId);
-          setCities(list);
-      }
-  }, [user, getCiudadesList]);
+    if (user?.parishId || user?.dioceseId) {
+        // Verificamos si la función existe antes de ejecutarla
+        const list = typeof getCiudadesList === 'function' 
+            ? getCiudadesList(user.parishId || user.dioceseId) 
+            : [];
+        setCities(list);
+    }
+}, [user, getCiudadesList]);
 
   // Simplified Ministers Load
   useEffect(() => {
