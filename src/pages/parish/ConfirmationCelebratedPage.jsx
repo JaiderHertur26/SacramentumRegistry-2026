@@ -12,20 +12,20 @@ import SearchBaptismPartidaModal from '@/components/modals/SearchBaptismPartidaM
 
 const ConfirmationCelebratedPage = () => {
     const { user } = useAuth();
-    const { 
-        saveConfirmationToSource, 
+    const {
+        saveConfirmationToSource,
         validateConfirmationNumbers,
         getConfirmations
     } = useAppData();
     const navigate = useNavigate();
     const { toast } = useToast();
-    
+
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentRegIndex, setCurrentRegIndex] = useState(0);
     const [totalRegs, setTotalRegs] = useState(1); // Default to 1 for new entry
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-    
+
     // Ministers State
     const [ministersList, setMinistersList] = useState([]);
     const [activePriest, setActivePriest] = useState({ id: '', name: '' });
@@ -37,31 +37,31 @@ const ConfirmationCelebratedPage = () => {
         folio: '',
         numero: '',
         fechaConfirmacion: new Date().toISOString().split('T')[0],
-        
+
         // Row 2
         lugar: '',
-        
+
         // Row 3
         apellidos: '',
         fechaNacimiento: '',
-        
+
         // Row 4
         nombres: '',
         edad: '',
         sexo: '', // M or F
-        
+
         // Row 5
         lugarBautismo: '',
         libroBautismo: '',
         folioBautismo: '',
         numeroBautismo: '',
-        
+
         // Row 6-9
         nombrePadre: '',
         nombreMadre: '',
         padrinoMadrina: '',
         ministro: '',
-        
+
         // Row 10
         daFeId: '', // ID or Code
         daFeNombre: ''
@@ -78,7 +78,7 @@ const ConfirmationCelebratedPage = () => {
 
             // 1. Set Parish Name as default Place
             let parishName = user.parishName || user.parish_name || "Parroquia Desconocida";
-            
+
             // Try to find more detailed parish info from 'misDatos' if available
             try {
                 const misDatosStr = localStorage.getItem(`misDatos_${contextId}`);
@@ -98,7 +98,7 @@ const ConfirmationCelebratedPage = () => {
             // Looking for priests/parrocos
             let foundMinisters = [];
             const priestKeys = [`parrocos_${contextId}`, 'parrocos'];
-            
+
             for (const key of priestKeys) {
                 try {
                     const data = JSON.parse(localStorage.getItem(key) || '[]');
@@ -108,10 +108,10 @@ const ConfirmationCelebratedPage = () => {
                     }
                 } catch (e) {}
             }
-            
+
             // Sort by date ASC (Oldest first) to calculate sequential Code
-            foundMinisters.sort((a, b) => 
-                new Date(a.fechaIngreso || a.fechaNombramiento || '1900-01-01') - 
+            foundMinisters.sort((a, b) =>
+                new Date(a.fechaIngreso || a.fechaNombramiento || '1900-01-01') -
                 new Date(b.fechaIngreso || b.fechaNombramiento || '1900-01-01')
             );
 
@@ -123,7 +123,7 @@ const ConfirmationCelebratedPage = () => {
                 status: String(p.estado || p.status || 0),
                 code: String(idx + 1).padStart(4, '0') // "0001", "0002"...
             })).filter(m => m.status === '1' || m.status === 'active' || m.status === 'Activo'); // ONLY ACTIVE PRIESTS
-            
+
             setMinistersList(formattedMinisters);
 
             // Set active priest default (Use the most recent active one if multiple, or the only one)
@@ -131,10 +131,10 @@ const ConfirmationCelebratedPage = () => {
                 // If sorted by oldest first, the last one is the most recently added/appointed
                 const active = formattedMinisters[formattedMinisters.length - 1];
                 setActivePriest(active);
-                setFormData(prev => ({ 
-                    ...prev, 
+                setFormData(prev => ({
+                    ...prev,
                     daFeId: active.id,
-                    daFeNombre: active.name 
+                    daFeNombre: active.name
                 }));
             }
 
@@ -152,7 +152,7 @@ const ConfirmationCelebratedPage = () => {
         if (formData.fechaNacimiento && formData.fechaConfirmacion) {
             const birth = new Date(formData.fechaNacimiento);
             const conf = new Date(formData.fechaConfirmacion);
-            
+
             if (!isNaN(birth.getTime()) && !isNaN(conf.getTime())) {
                 let age = conf.getFullYear() - birth.getFullYear();
                 const m = conf.getMonth() - birth.getMonth();
@@ -166,7 +166,7 @@ const ConfirmationCelebratedPage = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        
+
         // Special handling for 'Da Fe' dropdown
         if (name === 'daFeId') {
             const selectedMinister = ministersList.find(m => String(m.id) === String(value));
@@ -207,24 +207,24 @@ const ConfirmationCelebratedPage = () => {
             apellidos: partida.apellidos || partida.lastName || prev.apellidos,
             fechaNacimiento: partida.fechaNacimiento || partida.birthDate || prev.fechaNacimiento,
             sexo: normalizedSex || prev.sexo, // Updated to load sex/sexo
-            
+
             // Parents
             nombrePadre: partida.nombrePadre || partida.fatherName || prev.nombrePadre,
             nombreMadre: partida.nombreMadre || partida.motherName || prev.nombreMadre,
-            
+
             // Baptism Location Info
             lugarBautismo: partida.lugarBautismo || prev.lugarBautismo,
             libroBautismo: partida.book_number || partida.libro || prev.libroBautismo,
             folioBautismo: partida.page_number || partida.folio || prev.folioBautismo,
             numeroBautismo: partida.entry_number || partida.numero || prev.numeroBautismo
         }));
-        
+
         toast({
             title: "Datos Importados",
             description: `Se han cargado los datos de ${partida.nombres} ${partida.apellidos}.`,
             className: "bg-blue-50 border-blue-200 text-blue-900"
         });
-        
+
         handleCloseSearchModal();
     };
 
@@ -273,51 +273,51 @@ const ConfirmationCelebratedPage = () => {
         setIsSubmitting(true);
         try {
             const contextId = user.parishId || user.dioceseId;
-            
+
             // Prepare Data Object matching standard structure but flat mapping from this form
             const newRecord = {
                 // Numbering
                 book_number: formData.libro,
                 page_number: formData.folio,
                 entry_number: formData.numero,
-                
+
                 // Dates & Place
                 sacramentDate: formData.fechaConfirmacion,
                 place: formData.lugar,
                 sacramentPlace: formData.lugar,
-                
+
                 // Person
                 firstName: formData.nombres,
                 lastName: formData.apellidos,
                 birthDate: formData.fechaNacimiento,
                 sex: formData.sexo, // Saved as 'sex' (standard)
                 sexo: formData.sexo, // Saved as 'sexo' (requested persistence fix)
-                
+
                 // VITAL: Ensure Baptism Place is saved in standardized fields
                 birthPlace: formData.lugarBautismo, // Legacy mapping
                 baptismPlace: formData.lugarBautismo, // Explicit root field
-                
+
                 // Baptism details (Book, Folio, Number)
                 baptismBook: formData.libroBautismo,
                 baptismPage: formData.folioBautismo,
                 baptismNumber: formData.numeroBautismo,
-                
+
                 baptismData: {
                     place: formData.lugarBautismo,
                     book: formData.libroBautismo,
                     folio: formData.folioBautismo,
                     number: formData.numeroBautismo
                 },
-                
+
                 // Parents & Godparents
                 fatherName: formData.nombrePadre,
                 motherName: formData.nombreMadre,
                 godparents: formData.padrinoMadrina,
-                
+
                 // Ministers
                 minister: formData.ministro,
                 ministerFaith: formData.daFeNombre,
-                
+
                 // Metadata specific to this form view
                 metadata: {
                     ageAtConfirmation: formData.edad,
@@ -328,14 +328,14 @@ const ConfirmationCelebratedPage = () => {
             };
 
             const result = await saveConfirmationToSource(newRecord, contextId, 'celebrated');
-            
+
             if (result.success) {
                 toast({
                     title: "Registro Guardado",
                     description: `Confirmación de ${formData.nombres} ${formData.apellidos} guardada correctamente.`,
                     className: "bg-green-50 border-green-200 text-green-900"
                 });
-                
+
                 // Reset form but keep some context like place and dates if useful, or full reset
                 // Keeping place and dates usually helps in batch entry
                 setFormData(prev => ({
@@ -350,7 +350,7 @@ const ConfirmationCelebratedPage = () => {
                     daFeId: prev.daFeId,
                     daFeNombre: prev.daFeNombre
                 }));
-                
+
                 setTotalRegs(prev => prev + 1);
                 setCurrentRegIndex(prev => prev + 1);
 
@@ -371,7 +371,7 @@ const ConfirmationCelebratedPage = () => {
 
     return (
         <DashboardLayout entityName={user?.parishName || "Parroquia"}>
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -387,49 +387,49 @@ const ConfirmationCelebratedPage = () => {
 
                 {/* Form Container */}
                 <form onSubmit={handleSubmit} className="bg-white border-x border-b border-gray-200 shadow-xl rounded-b-xl p-6 md:p-8 space-y-6">
-                    
+
                     {/* ROW 1: Numbering & Date */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Libro</label>
-                            <input 
-                                type="number" 
-                                name="libro" 
-                                value={formData.libro} 
-                                onChange={handleChange} 
+                            <input
+                                type="number"
+                                name="libro"
+                                value={formData.libro}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] focus:border-transparent outline-none transition-all text-center font-mono font-bold text-lg"
                                 maxLength={4}
                             />
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Folio</label>
-                            <input 
-                                type="number" 
-                                name="folio" 
-                                value={formData.folio} 
-                                onChange={handleChange} 
+                            <input
+                                type="number"
+                                name="folio"
+                                value={formData.folio}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] focus:border-transparent outline-none transition-all text-center font-mono font-bold text-lg"
                                 maxLength={4}
                             />
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
-                            <input 
-                                type="number" 
-                                name="numero" 
-                                value={formData.numero} 
-                                onChange={handleChange} 
+                            <input
+                                type="number"
+                                name="numero"
+                                value={formData.numero}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] focus:border-transparent outline-none transition-all text-center font-mono font-bold text-lg"
                                 maxLength={4}
                             />
                         </div>
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha de Confirmación</label>
-                            <input 
-                                type="date" 
-                                name="fechaConfirmacion" 
-                                value={formData.fechaConfirmacion} 
-                                onChange={handleChange} 
+                            <input
+                                type="date"
+                                name="fechaConfirmacion"
+                                value={formData.fechaConfirmacion}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none"
                             />
                         </div>
@@ -438,11 +438,11 @@ const ConfirmationCelebratedPage = () => {
                     {/* ROW 2: Lugar */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Lugar</label>
-                        <input 
-                            type="text" 
-                            name="lugar" 
-                            value={formData.lugar} 
-                            onChange={handleChange} 
+                        <input
+                            type="text"
+                            name="lugar"
+                            value={formData.lugar}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                         />
                     </div>
@@ -451,21 +451,21 @@ const ConfirmationCelebratedPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos</label>
-                            <input 
-                                type="text" 
-                                name="apellidos" 
-                                value={formData.apellidos} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="apellidos"
+                                value={formData.apellidos}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-800"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha de Nacimiento</label>
-                            <input 
-                                type="date" 
-                                name="fechaNacimiento" 
-                                value={formData.fechaNacimiento} 
-                                onChange={handleChange} 
+                            <input
+                                type="date"
+                                name="fechaNacimiento"
+                                value={formData.fechaNacimiento}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none"
                             />
                         </div>
@@ -475,22 +475,22 @@ const ConfirmationCelebratedPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                         <div className="md:col-span-6">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombres</label>
-                            <input 
-                                type="text" 
-                                name="nombres" 
-                                value={formData.nombres} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="nombres"
+                                value={formData.nombres}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-800"
                             />
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Edad</label>
                             <div className="relative">
-                                <input 
-                                    type="number" 
-                                    name="edad" 
-                                    value={formData.edad} 
-                                    onChange={handleChange} 
+                                <input
+                                    type="number"
+                                    name="edad"
+                                    value={formData.edad}
+                                    onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none pr-12"
                                 />
                                 <span className="absolute right-3 top-2 text-xs font-bold text-gray-400 pointer-events-none">AÑOS</span>
@@ -498,10 +498,10 @@ const ConfirmationCelebratedPage = () => {
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Sexo</label>
-                            <select 
-                                name="sexo" 
-                                value={formData.sexo} 
-                                onChange={handleChange} 
+                            <select
+                                name="sexo"
+                                value={formData.sexo}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white"
                             >
                                 <option value="">Seleccione...</option>
@@ -516,16 +516,16 @@ const ConfirmationCelebratedPage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                             <div className="md:col-span-9">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Lugar de Bautismo</label>
-                                <ChurchLocationAutocomplete 
-                                    value={formData.lugarBautismo} 
+                                <ChurchLocationAutocomplete
+                                    value={formData.lugarBautismo}
                                     onChange={(val) => setFormData(prev => ({...prev, lugarBautismo: val}))}
                                     placeholder="Buscar iglesia y ciudad..."
                                 />
                             </div>
                             <div className="md:col-span-3">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
                                     onClick={handleOpenSearchModal}
                                     className="w-full border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50"
                                 >
@@ -533,42 +533,42 @@ const ConfirmationCelebratedPage = () => {
                                 </Button>
                             </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                             <div className="md:col-span-4">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">BAUTIZO INSCRITO EN LIBRO</label>
-                                <input 
-                                    type="text" 
-                                    name="libroBautismo" 
-                                    value={formData.libroBautismo} 
-                                    onChange={handleChange} 
+                                <input
+                                    type="text"
+                                    name="libroBautismo"
+                                    value={formData.libroBautismo}
+                                    onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                                 />
                             </div>
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">FOLIO</label>
-                                <input 
-                                    type="text" 
-                                    name="folioBautismo" 
-                                    value={formData.folioBautismo} 
-                                    onChange={handleChange} 
+                                <input
+                                    type="text"
+                                    name="folioBautismo"
+                                    value={formData.folioBautismo}
+                                    onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                                 />
                             </div>
                             <div className="md:col-span-3">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">NÚMERO</label>
-                                <input 
-                                    type="text" 
-                                    name="numeroBautismo" 
-                                    value={formData.numeroBautismo} 
-                                    onChange={handleChange} 
+                                <input
+                                    type="text"
+                                    name="numeroBautismo"
+                                    value={formData.numeroBautismo}
+                                    onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                                 />
                             </div>
                              <div className="md:col-span-3">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
+                                <Button
+                                    type="button"
+                                    variant="outline"
                                     onClick={handleOpenSearchModal}
                                     className="w-full border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50"
                                 >
@@ -581,11 +581,11 @@ const ConfirmationCelebratedPage = () => {
                     {/* ROW 6: Nombre del Padre */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Padre</label>
-                        <input 
-                            type="text" 
-                            name="nombrePadre" 
-                            value={formData.nombrePadre} 
-                            onChange={handleChange} 
+                        <input
+                            type="text"
+                            name="nombrePadre"
+                            value={formData.nombrePadre}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                         />
                     </div>
@@ -593,11 +593,11 @@ const ConfirmationCelebratedPage = () => {
                     {/* ROW 7: Nombre de la Madre */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre de la Madre</label>
-                        <input 
-                            type="text" 
-                            name="nombreMadre" 
-                            value={formData.nombreMadre} 
-                            onChange={handleChange} 
+                        <input
+                            type="text"
+                            name="nombreMadre"
+                            value={formData.nombreMadre}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                         />
                     </div>
@@ -605,11 +605,11 @@ const ConfirmationCelebratedPage = () => {
                     {/* ROW 8: Padrino / Madrina */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Padrino / Madrina</label>
-                        <input 
-                            type="text" 
-                            name="padrinoMadrina" 
-                            value={formData.padrinoMadrina} 
-                            onChange={handleChange} 
+                        <input
+                            type="text"
+                            name="padrinoMadrina"
+                            value={formData.padrinoMadrina}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                         />
                     </div>
@@ -617,11 +617,11 @@ const ConfirmationCelebratedPage = () => {
                     {/* ROW 9: Ministro */}
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Ministro</label>
-                        <input 
-                            type="text" 
-                            name="ministro" 
-                            value={formData.ministro} 
-                            onChange={handleChange} 
+                        <input
+                            type="text"
+                            name="ministro"
+                            value={formData.ministro}
+                            onChange={handleChange}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase"
                         />
                     </div>
@@ -630,10 +630,10 @@ const ConfirmationCelebratedPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Da Fe (Código)</label>
-                            <select 
-                                name="daFeId" 
-                                value={formData.daFeId} 
-                                onChange={handleChange} 
+                            <select
+                                name="daFeId"
+                                value={formData.daFeId}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white font-mono"
                             >
                                 <option value="">---</option>
@@ -645,11 +645,11 @@ const ConfirmationCelebratedPage = () => {
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Párroco</label>
-                            <input 
-                                type="text" 
-                                name="daFeNombre" 
-                                value={formData.daFeNombre} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="daFeNombre"
+                                value={formData.daFeNombre}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase bg-white"
                             />
                         </div>
@@ -657,10 +657,10 @@ const ConfirmationCelebratedPage = () => {
 
                     {/* Action Buttons */}
                     <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => navigate(-1)} 
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => navigate(-1)}
                             className="text-gray-600 border-gray-300 hover:bg-gray-50 gap-2"
                         >
                             <X className="w-4 h-4" /> Cancelar
@@ -677,8 +677,8 @@ const ConfirmationCelebratedPage = () => {
                                 </Button>
                              </div>
 
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={isSubmitting}
                                 className="bg-[#4B7BA7] hover:bg-[#3a5f8a] text-white px-8 font-bold shadow-md transition-all active:scale-95"
                             >
@@ -693,9 +693,9 @@ const ConfirmationCelebratedPage = () => {
                     </div>
                 </form>
             </motion.div>
-            
+
             {/* Search Modal */}
-            <SearchBaptismPartidaModal 
+            <SearchBaptismPartidaModal
                 isOpen={isSearchModalOpen}
                 onClose={handleCloseSearchModal}
                 onSelectPartida={handleSelectBaptismPartida}

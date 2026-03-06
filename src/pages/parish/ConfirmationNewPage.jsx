@@ -26,7 +26,7 @@ const ConfirmationNewPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [ministers, setMinisters] = useState([]);
-  
+
   // Ticket Printing States
   const [showTicket, setShowTicket] = useState(false);
   const [ticketData, setTicketData] = useState(null);
@@ -50,18 +50,18 @@ const ConfirmationNewPage = () => {
     birthDate: '',
     age: '',
     sex: '',
-    
+
     // Baptism Info
     baptismPlace: '',
     baptismBook: '',
     baptismFolio: '',
     baptismNumber: '',
-    
+
     // Parents & Godparents
     fatherName: '',
     motherName: '',
     godparents: '',
-    
+
     // Minister
     minister: '',
     ministerFaith: '',
@@ -106,7 +106,7 @@ const ConfirmationNewPage = () => {
           if (!user?.parishId && !user?.dioceseId) return;
 
           const contextId = user.parishId || user.dioceseId;
-          
+
           // 1. Load Parish Info for Ticket/Defaults
           const misDatos = getMisDatosList(contextId);
           let parishNameFound = null;
@@ -137,13 +137,13 @@ const ConfirmationNewPage = () => {
           const params = getConfirmationParameters(contextId);
           const nextNum = params?.ordinarioNumero || '1';
 
-          setFormData(prev => ({ 
-              ...prev, 
+          setFormData(prev => ({
+              ...prev,
               numero: nextNum,
               // place is now handled by the hook useEffect above
           }));
       };
-      
+
       loadData();
   }, [user, getMisDatosList, getConfirmationParameters]);
 
@@ -196,26 +196,26 @@ const ConfirmationNewPage = () => {
           lastName: partida.apellidos || partida.lastName || prev.lastName,
           birthDate: partida.fechaNacimiento || partida.birthDate || prev.birthDate,
           sex: normalizedSex || prev.sex,
-          
+
           // Parents
           fatherName: partida.nombrePadre || partida.fatherName || prev.fatherName,
           motherName: partida.nombreMadre || partida.motherName || prev.motherName,
-          
+
           // Baptism Info
           baptismBook: partida.book_number || partida.libro || prev.baptismBook,
           baptismFolio: partida.page_number || partida.folio || prev.baptismFolio,
           baptismNumber: partida.entry_number || partida.numero || prev.baptismNumber,
-          
+
           // Use place from record (formatted as CHURCH - CITY by modal), or fallback to current state
           baptismPlace: partida.lugarBautismo || prev.baptismPlace
       }));
-      
+
       toast({
           title: "Datos Importados",
           description: `Se han cargado los datos de ${partida.nombres || partida.firstName || ''} ${partida.apellidos || partida.lastName || ''}.`,
           className: "bg-blue-50 border-blue-200 text-blue-900"
       });
-      
+
       handleCloseSearchModal();
   };
 
@@ -270,20 +270,20 @@ const ConfirmationNewPage = () => {
             type: 'confirmation',
             parishId: user?.parishId,
             dioceseId: user?.dioceseId,
-            
+
             // Map flat form data to structure expected by other components if needed
             numero: formData.numero,
             inscriptionDate: formData.inscriptionDate,
             isDecreto: formData.isDecreto,
-            
+
             firstName: formData.firstName,
             lastName: formData.lastName,
-            sacramentDate: formData.sacramentDate, 
+            sacramentDate: formData.sacramentDate,
             birthDate: formData.birthDate,
             age: formData.age,
             sex: formData.sex,
             place: formData.place,
-            
+
             baptismData: {
                 place: formData.baptismPlace,
                 book: formData.baptismBook,
@@ -295,7 +295,7 @@ const ConfirmationNewPage = () => {
             fatherName: formData.fatherName,
             motherName: formData.motherName,
             godparents: formData.godparents,
-            
+
             // Add Da Fe
             ministerFaith: activePriestDisplay || formData.ministerFaith,
 
@@ -304,25 +304,25 @@ const ConfirmationNewPage = () => {
                 number: formData.decretoNumber,
                 issuer: formData.decretoIssuer
             } : null,
-            
+
             // For compatibility with Ticket component
-            lugarNacimientoDetalle: '', 
+            lugarNacimientoDetalle: '',
             lugarConfirmacionDetalle: formData.place
         };
 
         // SAVE TO LOCAL STORAGE (Pending)
         const updated = [...existing, newConfirmation];
         localStorage.setItem(storageKey, JSON.stringify(updated));
-        
+
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // TICKET & PRINT LOGIC
         setTicketData(newConfirmation);
         setShowTicket(true);
         setIsSuccess(true);
-        
-        toast({ 
-            title: "Éxito - Confirmación guardada", 
+
+        toast({
+            title: "Éxito - Confirmación guardada",
             description: "Imprimiendo boleta...",
             className: "bg-green-50 border-green-200 text-green-900"
         });
@@ -331,7 +331,7 @@ const ConfirmationNewPage = () => {
         setTimeout(() => {
             window.print();
         }, 500);
-        
+
     } catch (error) {
         console.error(error);
         toast({
@@ -357,7 +357,7 @@ const ConfirmationNewPage = () => {
                         <p className="text-gray-700 mb-8 font-medium">
                             Se ha enviado la orden de impresión para la boleta.
                         </p>
-                        
+
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
                             <Button onClick={() => window.location.reload()} variant="outline" className="text-gray-900 border-gray-300">
                                 Nuevo Registro
@@ -384,7 +384,7 @@ const ConfirmationNewPage = () => {
     <>
         <div className="print:hidden">
             <DashboardLayout entityName={user?.parishName || "Parroquia"}>
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
@@ -400,8 +400,8 @@ const ConfirmationNewPage = () => {
                         <div className="bg-gray-50 border-b border-gray-200 p-6 flex flex-wrap items-center gap-6">
                             <div className="flex-1 min-w-[200px]">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     name="numero"
                                     value={formData.numero}
                                     onChange={handleChange}
@@ -410,8 +410,8 @@ const ConfirmationNewPage = () => {
                             </div>
                             <div className="flex-1 min-w-[200px]">
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha</label>
-                                <input 
-                                    type="date" 
+                                <input
+                                    type="date"
                                     name="inscriptionDate"
                                     value={formData.inscriptionDate}
                                     onChange={handleChange}
@@ -420,12 +420,12 @@ const ConfirmationNewPage = () => {
                             </div>
                             <div className="flex items-center pt-5">
                                 <label className="flex items-center gap-2 cursor-pointer select-none">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         name="isDecreto"
                                         checked={formData.isDecreto}
                                         onChange={handleChange}
-                                        className="w-5 h-5 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]" 
+                                        className="w-5 h-5 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]"
                                     />
                                     <span className="font-bold text-gray-700">Por Decreto</span>
                                 </label>
@@ -433,28 +433,28 @@ const ConfirmationNewPage = () => {
                         </div>
 
                         <div className="p-8 space-y-6">
-                            
+
                             {/* MAIN FORM */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha y Hora</label>
-                                    <input 
-                                        type="datetime-local" 
-                                        name="sacramentDate" 
-                                        value={formData.sacramentDate} 
-                                        onChange={handleChange} 
+                                    <input
+                                        type="datetime-local"
+                                        name="sacramentDate"
+                                        value={formData.sacramentDate}
+                                        onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Lugar Confirmación</label>
-                                    <input 
-                                        type="text" 
-                                        name="place" 
-                                        value={formData.place} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="place"
+                                        value={formData.place}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                             </div>
@@ -462,24 +462,24 @@ const ConfirmationNewPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos <span className="text-red-500">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        name="lastName" 
-                                        value={formData.lastName} 
-                                        onChange={handleChange} 
+                                    <input
+                                        type="text"
+                                        name="lastName"
+                                        value={formData.lastName}
+                                        onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 uppercase font-semibold" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 uppercase font-semibold"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre <span className="text-red-500">*</span></label>
-                                    <input 
-                                        type="text" 
-                                        name="firstName" 
-                                        value={formData.firstName} 
-                                        onChange={handleChange} 
+                                    <input
+                                        type="text"
+                                        name="firstName"
+                                        value={formData.firstName}
+                                        onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 uppercase font-semibold" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 uppercase font-semibold"
                                     />
                                 </div>
                             </div>
@@ -487,31 +487,31 @@ const ConfirmationNewPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                                 <div className="md:col-span-5">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha de Nacimiento</label>
-                                    <input 
-                                        type="date" 
-                                        name="birthDate" 
-                                        value={formData.birthDate} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="date"
+                                        name="birthDate"
+                                        value={formData.birthDate}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div className="md:col-span-3">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Edad</label>
-                                    <input 
-                                        type="number" 
-                                        name="age" 
-                                        value={formData.age} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-gray-50" 
+                                    <input
+                                        type="number"
+                                        name="age"
+                                        value={formData.age}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-gray-50"
                                         readOnly
                                     />
                                 </div>
                                 <div className="md:col-span-4">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Sexo</label>
-                                    <select 
-                                        name="sex" 
-                                        value={formData.sex} 
-                                        onChange={handleChange} 
+                                    <select
+                                        name="sex"
+                                        value={formData.sex}
+                                        onChange={handleChange}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white"
                                     >
                                         <option value="">Seleccione...</option>
@@ -524,16 +524,16 @@ const ConfirmationNewPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                 <div className="md:col-span-9">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Lugar de Bautizo</label>
-                                    <ChurchLocationAutocomplete 
-                                        value={formData.baptismPlace} 
-                                        onChange={(val) => setFormData({...formData, baptismPlace: val})} 
-                                        placeholder="Buscar iglesia y ciudad..." 
+                                    <ChurchLocationAutocomplete
+                                        value={formData.baptismPlace}
+                                        onChange={(val) => setFormData({...formData, baptismPlace: val})}
+                                        placeholder="Buscar iglesia y ciudad..."
                                     />
                                 </div>
                                 <div className="md:col-span-3">
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
+                                    <Button
+                                        type="button"
+                                        variant="outline"
                                         onClick={handleOpenSearchModal}
                                         className="w-full border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50"
                                     >
@@ -545,38 +545,38 @@ const ConfirmationNewPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                                 <div className="md:col-span-4">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Bautizo Inscrito en Libro</label>
-                                    <input 
-                                        type="text" 
-                                        name="baptismBook" 
-                                        value={formData.baptismBook} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="baptismBook"
+                                        value={formData.baptismBook}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Folio</label>
-                                    <input 
-                                        type="text" 
-                                        name="baptismFolio" 
-                                        value={formData.baptismFolio} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="baptismFolio"
+                                        value={formData.baptismFolio}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div className="md:col-span-3">
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
-                                    <input 
-                                        type="text" 
-                                        name="baptismNumber" 
-                                        value={formData.baptismNumber} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="baptismNumber"
+                                        value={formData.baptismNumber}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div className="md:col-span-3">
-                                    <Button 
-                                        type="button" 
-                                        variant="outline" 
+                                    <Button
+                                        type="button"
+                                        variant="outline"
                                         onClick={handleOpenSearchModal}
                                         className="w-full border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50"
                                     >
@@ -588,34 +588,34 @@ const ConfirmationNewPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Padre</label>
-                                    <input 
-                                        type="text" 
-                                        name="fatherName" 
-                                        value={formData.fatherName} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="fatherName"
+                                        value={formData.fatherName}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre de la Madre</label>
-                                    <input 
-                                        type="text" 
-                                        name="motherName" 
-                                        value={formData.motherName} 
-                                        onChange={handleChange} 
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                    <input
+                                        type="text"
+                                        name="motherName"
+                                        value={formData.motherName}
+                                        onChange={handleChange}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Padrino / Madrina</label>
-                                <input 
-                                    type="text" 
-                                    name="godparents" 
-                                    value={formData.godparents} 
-                                    onChange={handleChange} 
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                <input
+                                    type="text"
+                                    name="godparents"
+                                    value={formData.godparents}
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                 />
                             </div>
 
@@ -625,23 +625,23 @@ const ConfirmationNewPage = () => {
                                         <label className="block text-xs font-bold text-gray-700 uppercase">Ministro <span className="text-red-500">*</span></label>
                                         <span className="text-xs text-gray-400">Ninguno</span>
                                     </div>
-                                    <input 
-                                        type="text" 
-                                        name="minister" 
-                                        value={formData.minister} 
-                                        onChange={handleChange} 
+                                    <input
+                                        type="text"
+                                        name="minister"
+                                        value={formData.minister}
+                                        onChange={handleChange}
                                         required
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900"
                                     />
                                 </div>
                                 <div>
                                     <div className="flex justify-between mb-1">
                                         <label className="block text-xs font-bold text-gray-700 uppercase">Da Fe (Párroco)</label>
                                     </div>
-                                    <Input 
-                                        name="ministerFaith" 
-                                        value={formData.ministerFaith} 
-                                        onChange={handleChange} 
+                                    <Input
+                                        name="ministerFaith"
+                                        value={formData.ministerFaith}
+                                        onChange={handleChange}
                                     />
                                 </div>
                             </div>
@@ -649,7 +649,7 @@ const ConfirmationNewPage = () => {
                             {/* DECREE SECTION - ANIMATED */}
                             <AnimatePresence>
                                 {formData.isDecreto && (
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: "auto" }}
                                         exit={{ opacity: 0, height: 0 }}
@@ -662,32 +662,32 @@ const ConfirmationNewPage = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                 <div>
                                                     <label className="block text-xs font-bold text-yellow-800 uppercase mb-1">Fecha</label>
-                                                    <input 
-                                                        type="date" 
-                                                        name="decretoDate" 
-                                                        value={formData.decretoDate} 
-                                                        onChange={handleChange} 
-                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white" 
+                                                    <input
+                                                        type="date"
+                                                        name="decretoDate"
+                                                        value={formData.decretoDate}
+                                                        onChange={handleChange}
+                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-yellow-800 uppercase mb-1">Decreto No.</label>
-                                                    <input 
-                                                        type="text" 
-                                                        name="decretoNumber" 
-                                                        value={formData.decretoNumber} 
-                                                        onChange={handleChange} 
-                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white" 
+                                                    <input
+                                                        type="text"
+                                                        name="decretoNumber"
+                                                        value={formData.decretoNumber}
+                                                        onChange={handleChange}
+                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-bold text-yellow-800 uppercase mb-1">Expedido por</label>
-                                                    <input 
-                                                        type="text" 
-                                                        name="decretoIssuer" 
-                                                        value={formData.decretoIssuer} 
-                                                        onChange={handleChange} 
-                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white" 
+                                                    <input
+                                                        type="text"
+                                                        name="decretoIssuer"
+                                                        value={formData.decretoIssuer}
+                                                        onChange={handleChange}
+                                                        className="w-full px-3 py-2 border border-yellow-300 rounded-md focus:ring-2 focus:ring-yellow-500 outline-none text-gray-900 bg-white"
                                                     />
                                                 </div>
                                             </div>
@@ -698,24 +698,24 @@ const ConfirmationNewPage = () => {
 
                             {/* TOOLBAR */}
                             <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end gap-4">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    onClick={() => navigate(-1)} 
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => navigate(-1)}
                                     disabled={isSubmitting}
                                     className="gap-2 text-gray-900 border-gray-300 hover:bg-gray-100"
                                 >
                                     <X className="w-4 h-4" /> Cancelar
                                 </Button>
-                                <Button 
-                                    type="submit" 
+                                <Button
+                                    type="submit"
                                     disabled={isSubmitting}
                                     className="bg-[#D4AF37] hover:bg-[#C4A027] text-white gap-2 px-8 py-2.5 shadow-lg shadow-yellow-500/20 transition-transform active:scale-95 font-bold"
                                 >
                                     {isSubmitting ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
                                     ) : (
-                                        <Save className="w-4 h-4" /> 
+                                        <Save className="w-4 h-4" />
                                     )}
                                     {isSubmitting ? 'Guardando...' : 'Guardar y Generar Boleta'}
                                 </Button>
@@ -723,14 +723,14 @@ const ConfirmationNewPage = () => {
                         </div>
                     </form>
                 </motion.div>
-                
+
                 {/* Search Modal */}
-                <SearchBaptismPartidaModal 
+                <SearchBaptismPartidaModal
                     isOpen={isSearchModalOpen}
                     onClose={handleCloseSearchModal}
                     onSelectPartida={handleSelectBaptismPartida}
                 />
-                
+
             </DashboardLayout>
             </div>
 

@@ -10,22 +10,22 @@ import { motion } from 'framer-motion';
 
 const MatrimonioCelebratedPage = () => {
     const { user } = useAuth();
-    const { 
-        saveMatrimonioToSource, 
+    const {
+        saveMatrimonioToSource,
         validateMatrimonioNumbers,
         getMatrimonios
     } = useAppData();
     const navigate = useNavigate();
     const { toast } = useToast();
-    
+
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentRegIndex, setCurrentRegIndex] = useState(0);
     const [totalRegs, setTotalRegs] = useState(1);
-    
+
     // Ministers State
     const [ministersList, setMinistersList] = useState([]);
-    
+
     // Initial Form State
     const initialFormData = {
         // Row 1
@@ -34,10 +34,10 @@ const MatrimonioCelebratedPage = () => {
         numero: '',
         expediente: '',
         fechaMatrimonio: new Date().toISOString().split('T')[0],
-        
+
         // Row 2
         lugarCelebracion: '',
-        
+
         // Esposo
         esposoApellidos: '',
         esposoNombres: '',
@@ -49,7 +49,7 @@ const MatrimonioCelebratedPage = () => {
         esposoLibro: '',
         esposoFolio: '',
         esposoNumero: '',
-        
+
         // Esposa
         esposaApellidos: '',
         esposaNombres: '',
@@ -61,7 +61,7 @@ const MatrimonioCelebratedPage = () => {
         esposaLibro: '',
         esposaFolio: '',
         esposaNumero: '',
-        
+
         // Adicionales
         testigo: '',
         presencia: '',
@@ -96,7 +96,7 @@ const MatrimonioCelebratedPage = () => {
             // 2. Load Ministers for 'Da Fe' dropdown
             let foundMinisters = [];
             const priestKeys = [`parrocos_${contextId}`, 'parrocos'];
-            
+
             for (const key of priestKeys) {
                 try {
                     const data = JSON.parse(localStorage.getItem(key) || '[]');
@@ -106,10 +106,10 @@ const MatrimonioCelebratedPage = () => {
                     }
                 } catch (e) {}
             }
-            
+
             // Sort by date ASC (Oldest first) to calculate sequential Code
-            foundMinisters.sort((a, b) => 
-                new Date(a.fechaIngreso || a.fechaNombramiento || '1900-01-01') - 
+            foundMinisters.sort((a, b) =>
+                new Date(a.fechaIngreso || a.fechaNombramiento || '1900-01-01') -
                 new Date(b.fechaIngreso || b.fechaNombramiento || '1900-01-01')
             );
 
@@ -120,16 +120,16 @@ const MatrimonioCelebratedPage = () => {
                 status: String(p.estado || p.status || 0),
                 code: String(idx + 1).padStart(4, '0') // "0001", "0002"...
             })).filter(m => m.status === '1' || m.status === 'active' || m.status === 'Activo'); // ONLY ACTIVE PRIESTS
-            
+
             setMinistersList(formattedMinisters);
 
             // Set active priest default
             if (formattedMinisters.length > 0) {
                 const active = formattedMinisters[formattedMinisters.length - 1];
-                setFormData(prev => ({ 
-                    ...prev, 
+                setFormData(prev => ({
+                    ...prev,
                     daFeId: active.id,
-                    daFeNombre: active.name 
+                    daFeNombre: active.name
                 }));
             }
 
@@ -212,7 +212,7 @@ const MatrimonioCelebratedPage = () => {
         setIsSubmitting(true);
         try {
             const contextId = user.parishId || user.dioceseId;
-            
+
             const newRecord = {
                 // Core
                 book_number: formData.libro,
@@ -220,14 +220,14 @@ const MatrimonioCelebratedPage = () => {
                 entry_number: formData.numero,
                 sacramentDate: formData.fechaMatrimonio,
                 place: formData.lugarCelebracion,
-                
+
                 // Groom
                 groomName: formData.esposoNombres,
                 groomSurname: formData.esposoApellidos,
                 groomParents: [{ name: formData.esposoPadres, role: 'parents' }], // Simplified for this view
                 groomBirthDate: formData.esposoFechaNac,
                 groomBirthPlace: formData.esposoLugarNac,
-                
+
                 // Bride
                 brideName: formData.esposaNombres,
                 brideSurname: formData.esposaApellidos,
@@ -238,7 +238,7 @@ const MatrimonioCelebratedPage = () => {
                 // Ministers & Witnesses
                 minister: formData.presencia,
                 witnesses: [{ name: formData.testigo, role: 'testigo' }],
-                
+
                 // Metadata specific to this form view
                 metadata: {
                     expediente: formData.expediente,
@@ -262,14 +262,14 @@ const MatrimonioCelebratedPage = () => {
             };
 
             const result = await saveMatrimonioToSource(newRecord, contextId, 'celebrated');
-            
+
             if (result.success) {
                 toast({
                     title: "Registro Guardado",
                     description: `Matrimonio de ${formData.esposoApellidos} y ${formData.esposaApellidos} guardado.`,
                     className: "bg-green-50 border-green-200 text-green-900"
                 });
-                
+
                 // Reset form for next entry but keep logical fields
                 setFormData(prev => ({
                     ...initialFormData,
@@ -282,7 +282,7 @@ const MatrimonioCelebratedPage = () => {
                     daFeId: prev.daFeId,
                     daFeNombre: prev.daFeNombre
                 }));
-                
+
                 setTotalRegs(prev => prev + 1);
                 setCurrentRegIndex(prev => prev + 1);
 
@@ -303,7 +303,7 @@ const MatrimonioCelebratedPage = () => {
 
     return (
         <DashboardLayout entityName={user?.parishName || "Parroquia"}>
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -320,7 +320,7 @@ const MatrimonioCelebratedPage = () => {
 
                 {/* Form Container */}
                 <form onSubmit={handleSubmit} className="bg-white border-x border-b border-gray-200 shadow-xl rounded-b-xl p-6 md:p-8 space-y-6">
-                    
+
                     {/* SECTION 1: Basic Info */}
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                         <div className="md:col-span-1">
@@ -361,7 +361,7 @@ const MatrimonioCelebratedPage = () => {
                                 <Search className="w-3 h-3" />
                             </Button>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos</label>
@@ -422,7 +422,7 @@ const MatrimonioCelebratedPage = () => {
                                 <Search className="w-3 h-3" />
                             </Button>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Apellidos</label>
@@ -488,15 +488,15 @@ const MatrimonioCelebratedPage = () => {
                             <input type="text" name="presencia" value={formData.presencia} onChange={handleChange} placeholder="Nombre del Sacerdote" className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase" />
                         </div>
                     </div>
-                    
+
                     {/* Da Fe Block - Full Width */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-gray-50 p-4 rounded-lg border border-gray-200">
                         <div className="md:col-span-1">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Da Fe (Código)</label>
-                            <select 
-                                name="daFeId" 
-                                value={formData.daFeId} 
-                                onChange={handleChange} 
+                            <select
+                                name="daFeId"
+                                value={formData.daFeId}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white font-mono"
                             >
                                 <option value="">---</option>
@@ -507,11 +507,11 @@ const MatrimonioCelebratedPage = () => {
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Párroco</label>
-                            <input 
-                                type="text" 
-                                name="daFeNombre" 
-                                value={formData.daFeNombre} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="daFeNombre"
+                                value={formData.daFeNombre}
+                                onChange={handleChange}
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase bg-white"
                             />
                         </div>
@@ -519,10 +519,10 @@ const MatrimonioCelebratedPage = () => {
 
                     {/* ACTION BUTTONS */}
                     <div className="flex justify-between items-center pt-6 border-t border-gray-100">
-                        <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={() => navigate(-1)} 
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => navigate(-1)}
                             className="text-gray-600 border-gray-300 hover:bg-gray-50 gap-2"
                         >
                             <X className="w-4 h-4" /> Cancelar
@@ -538,8 +538,8 @@ const MatrimonioCelebratedPage = () => {
                                 </Button>
                              </div>
 
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={isSubmitting}
                                 className="bg-[#4B7BA7] hover:bg-[#3a5f8a] text-white px-8 font-bold shadow-md transition-all active:scale-95"
                             >

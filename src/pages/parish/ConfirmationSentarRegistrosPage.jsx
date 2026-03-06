@@ -58,7 +58,7 @@ const getPartidaParameters = (entityId) => {
         folio: parseInt(params.ordinarioFolio || 1),
         numero: parseInt(params.ordinarioNumero || 1),
         partidasPerFolio: parseInt(params.ordinarioPartidas || 1),
-        numeroIncrement: 1 
+        numeroIncrement: 1
     };
 };
 
@@ -77,9 +77,9 @@ const updatePartidaParameters = (entityId, newLibro, newFolio, newNumero) => {
 const calculateNextPartidaValues = (entityId, currentLibro, currentFolio, currentNumero, partidasPerFolio) => {
     const key = `confirmations_${entityId}`;
     const allRecords = JSON.parse(localStorage.getItem(key) || '[]');
-    
-    const countInFolio = allRecords.filter(r => 
-        parseInt(r.book_number) === parseInt(currentLibro) && 
+
+    const countInFolio = allRecords.filter(r =>
+        parseInt(r.book_number) === parseInt(currentLibro) &&
         parseInt(r.page_number) === parseInt(currentFolio)
     ).length;
 
@@ -141,7 +141,7 @@ const ConfirmationSentarRegistrosPage = () => {
     const loadData = () => {
         setIsLoading(true);
         const entityId = user.parishId || user.dioceseId;
-        
+
         const pendingKey = `pendingConfirmations_${entityId}`;
         const storedPending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
         
@@ -170,7 +170,7 @@ const ConfirmationSentarRegistrosPage = () => {
 
     const handlePrintTicketIndividual = () => {
         const currentConf = pendingConfirmations[currentIndex];
-        
+
         if (!currentConf || !currentConf.id) {
             toast({ title: "Error", description: "No hay datos válidos.", variant: "destructive" });
             return;
@@ -225,7 +225,7 @@ const ConfirmationSentarRegistrosPage = () => {
     const handleFormChange = (e) => {
         const { name, value, type } = e.target;
         let finalValue = value;
-        
+
         if (type === 'date') {
             finalValue = toStorageDate(value);
         }
@@ -268,7 +268,7 @@ const ConfirmationSentarRegistrosPage = () => {
         const { newLibro, newFolio, newNumero } = calculateNextPartidaValues(entityId, libro, folio, numero, partidasPerFolio);
 
         updatePartidaParameters(entityId, newLibro, newFolio, newNumero);
-        
+
         setParameters({
             ordinarioLibro: newLibro,
             ordinarioFolio: newFolio,
@@ -312,13 +312,13 @@ const ConfirmationSentarRegistrosPage = () => {
 
         const entityId = user.parishId || user.dioceseId;
         let { libro, folio, numero, partidasPerFolio } = getPartidaParameters(entityId);
-        
+
         const finalKey = `confirmations_${entityId}`;
         const existingRecords = JSON.parse(localStorage.getItem(finalKey) || '[]');
         
         const today = new Date();
         const formattedToday = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
-        
+
         const newFinalRecords = [];
         const recordsToSave = [...existingRecords];
 
@@ -332,13 +332,13 @@ const ConfirmationSentarRegistrosPage = () => {
                 registrationDate: formattedToday,
                 sex: conf.sex || 'MASCULINO'
             };
-            
-            newFinalRecords.push(record);
-            recordsToSave.push(record); 
 
-            numero++; 
-            const countInFolio = recordsToSave.filter(r => 
-                parseInt(r.book_number) === parseInt(libro) && 
+            newFinalRecords.push(record);
+            recordsToSave.push(record);
+
+            numero++;
+            const countInFolio = recordsToSave.filter(r =>
+                parseInt(r.book_number) === parseInt(libro) &&
                 parseInt(r.page_number) === parseInt(folio)
             ).length;
 
@@ -397,8 +397,8 @@ const ConfirmationSentarRegistrosPage = () => {
                             <button
                                 onClick={() => setViewMode('individual')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                    viewMode === 'individual' 
-                                        ? 'bg-[#4B7BA7] text-white shadow-sm' 
+                                    viewMode === 'individual'
+                                        ? 'bg-[#4B7BA7] text-white shadow-sm'
                                         : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
@@ -408,8 +408,8 @@ const ConfirmationSentarRegistrosPage = () => {
                             <button
                                 onClick={() => setViewMode('batch')}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                    viewMode === 'batch' 
-                                        ? 'bg-[#4B7BA7] text-white shadow-sm' 
+                                    viewMode === 'batch'
+                                        ? 'bg-[#4B7BA7] text-white shadow-sm'
                                         : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                             >
@@ -464,10 +464,10 @@ const ConfirmationSentarRegistrosPage = () => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-xs font-bold text-[#4B7BA7] uppercase">Fecha Confirmación</label>
-                                        <Input 
-                                            name="sacramentDate" 
+                                        <Input
+                                            name="sacramentDate"
                                             type="date"
-                                            value={toInputDate(currentConf.sacramentDate)} 
+                                            value={toInputDate(currentConf.sacramentDate)}
                                             onChange={handleFormChange}
                                             className="border-gray-300 focus:border-[#4B7BA7]"
                                         />
@@ -492,9 +492,9 @@ const ConfirmationSentarRegistrosPage = () => {
                                             </div>
                                             <div>
                                                 <label className="text-xs font-semibold text-gray-600">Sexo</label>
-                                                <select 
-                                                    name="sex" 
-                                                    value={currentConf.sex || ''} 
+                                                <select
+                                                    name="sex"
+                                                    value={currentConf.sex || ''}
                                                     onChange={handleFormChange}
                                                     className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#4B7BA7]"
                                                 >
@@ -526,9 +526,9 @@ const ConfirmationSentarRegistrosPage = () => {
 
                                 <div className="space-y-2 mb-6">
                                     <label className="text-xs font-semibold text-gray-600">Padrinos</label>
-                                    <textarea 
-                                        name="godparents" 
-                                        value={currentConf.godparents || ''} 
+                                    <textarea
+                                        name="godparents"
+                                        value={currentConf.godparents || ''}
                                         onChange={handleFormChange}
                                         className="w-full rounded-md border border-gray-300 p-2 text-sm h-16 resize-none focus:ring-2 focus:ring-[#4B7BA7] outline-none"
                                     />
@@ -548,9 +548,9 @@ const ConfirmationSentarRegistrosPage = () => {
                                     <div className="space-y-3">
                                         <div>
                                             <label className="text-xs font-semibold text-gray-600">Da Fe (Firma)</label>
-                                            <Input 
-                                                name="ministerFaith" 
-                                                value={currentConf.ministerFaith || ''} 
+                                            <Input
+                                                name="ministerFaith"
+                                                value={currentConf.ministerFaith || ''}
                                                 onChange={handleFormChange}
                                                 placeholder="Nombre del párroco"
                                             />
@@ -601,8 +601,8 @@ const ConfirmationSentarRegistrosPage = () => {
                                         <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 uppercase">
                                             <tr>
                                                 <th className="px-6 py-3 w-10">
-                                                    <input 
-                                                        type="checkbox" 
+                                                    <input
+                                                        type="checkbox"
                                                         checked={selectedIds.length === pendingConfirmations.length && pendingConfirmations.length > 0}
                                                         onChange={toggleSelectAll}
                                                         className="w-4 h-4 text-[#4B7BA7] rounded border-gray-300 focus:ring-[#4B7BA7]"
@@ -618,8 +618,8 @@ const ConfirmationSentarRegistrosPage = () => {
                                             {pendingConfirmations.map((conf, idx) => (
                                                 <tr key={conf.id || idx} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-6 py-3">
-                                                        <input 
-                                                            type="checkbox" 
+                                                        <input
+                                                            type="checkbox"
                                                             checked={selectedIds.includes(conf.id)}
                                                             onChange={() => toggleSelection(conf.id)}
                                                             className="w-4 h-4 text-[#4B7BA7] rounded border-gray-300 focus:ring-[#4B7BA7]"
@@ -641,8 +641,8 @@ const ConfirmationSentarRegistrosPage = () => {
                                 <Button variant="outline" className="text-gray-600" onClick={() => setSelectedIds([])} disabled={selectedIds.length === 0}>
                                     Cancelar Selección
                                 </Button>
-                                <Button 
-                                    className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold" 
+                                <Button
+                                    className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold"
                                     onClick={handlePrintTicketBatch}
                                     disabled={selectedIds.length !== 1}
                                     title={selectedIds.length !== 1 ? "Seleccione exactamente un registro para imprimir" : "Imprimir Boleta"}
@@ -650,8 +650,8 @@ const ConfirmationSentarRegistrosPage = () => {
                                     <Printer className="w-4 h-4 mr-2" />
                                     Imprimir Boleta
                                 </Button>
-                                <Button 
-                                    className="bg-[#4B7BA7] hover:bg-[#3A6286] text-white" 
+                                <Button
+                                    className="bg-[#4B7BA7] hover:bg-[#3A6286] text-white"
                                     onClick={handleRegisterBatch}
                                     disabled={selectedIds.length === 0}
                                 >
@@ -663,7 +663,7 @@ const ConfirmationSentarRegistrosPage = () => {
                     )}
                 </DashboardLayout>
             </div>
-            
+
             <div className="hidden print:block">
                  {ticketData && <ConfirmationTicket confirmationData={ticketData} parishInfo={parishInfo} />}
             </div>

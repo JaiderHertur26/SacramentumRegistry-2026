@@ -82,12 +82,12 @@ const MatrimonioPartidasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // State for data handling
   const [selectedPartida, setSelectedPartida] = useState(null); // Used for InfoBox
   const [selectedRecord, setSelectedRecord] = useState(null); // Used for Modal
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  
+
   const [sortConfig, setSortConfig] = useState({ key: 'entry_number', direction: 'desc' });
   const [parishPrintData, setParishPrintData] = useState({});
   const [isReadingPanelOpen, setIsReadingPanelOpen] = useState(false);
@@ -107,7 +107,7 @@ const MatrimonioPartidasPage = () => {
 
   const loadParishData = () => {
     if (!user?.parishId) return;
-    try { const misDatos = getMisDatosList(user.parishId); if (misDatos && misDatos.length > 0) setParishPrintData(misDatos[0]); } 
+    try { const misDatos = getMisDatosList(user.parishId); if (misDatos && misDatos.length > 0) setParishPrintData(misDatos[0]); }
     catch (err) { console.error("Error loading parish data:", err); }
   };
 
@@ -116,8 +116,8 @@ const MatrimonioPartidasPage = () => {
     setIsLoading(true);
     const entityId = user.parishId || user.dioceseId;
     const key = `matrimonios_${entityId}`;
-    try { const storedData = localStorage.getItem(key); if (storedData) setRecords(JSON.parse(storedData)); else setRecords([]); } 
-    catch (error) { console.error("Error loading marriages:", error); } 
+    try { const storedData = localStorage.getItem(key); if (storedData) setRecords(JSON.parse(storedData)); else setRecords([]); }
+    catch (error) { console.error("Error loading marriages:", error); }
     finally { setIsLoading(false); }
   };
 
@@ -162,7 +162,7 @@ const MatrimonioPartidasPage = () => {
   
   const handleViewClick = (row, e) => { 
       e?.stopPropagation(); 
-      setSelectedRecord(row); 
+      setSelectedRecord(row);
       setIsViewModalOpen(true); 
   };
 
@@ -198,11 +198,11 @@ const MatrimonioPartidasPage = () => {
                     { 
                         label: (row) => {
                             const isAnnulled = row.status === 'anulada' || row.isAnnulled;
-                            return isAnnulled 
+                            return isAnnulled
                                 ? <XCircle className="w-4 h-4" />
                                 : <CheckCircle className="w-4 h-4" />;
                         },
-                        type: 'verify-status', 
+                        type: 'verify-status',
                         className: (row) => {
                             const isAnnulled = row.status === 'anulada' || row.isAnnulled;
                             return `p-2 rounded-full h-9 w-9 flex items-center justify-center cursor-default ${

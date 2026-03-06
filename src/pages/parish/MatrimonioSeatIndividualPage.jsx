@@ -3,12 +3,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useAppData } from '@/context/AppDataContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { 
+import {
     ChevronLeft, 
     ChevronRight, 
     ChevronsLeft, 
     ChevronsRight, 
-    CheckCircle2, 
+    CheckCircle2,
     LogOut,
     Heart
 } from 'lucide-react';
@@ -41,9 +41,9 @@ const MatrimonioSeatIndividualPage = () => {
 
     const handleConfirm = async () => {
         if (!currentRecord) return;
-        
+
         const result = await seatMatrimonio(currentRecord.id, user?.parishId);
-        
+
         if (result.success) {
             toast({
                 title: "Registro Asentado",
@@ -54,7 +54,7 @@ const MatrimonioSeatIndividualPage = () => {
             const newRecords = await getPendingMatrimonios(user?.parishId);
             setPending(newRecords);
             setNextNumbers(getNextMatrimonioNumbers(user?.parishId));
-            
+
             if (currentIndex >= newRecords.length) {
                 setCurrentIndex(Math.max(0, newRecords.length - 1));
             }
@@ -158,7 +158,7 @@ const MatrimonioSeatIndividualPage = () => {
                          <div className="col-span-2"><Field label="Padres" value={`${currentRecord.brideFather || ''} y ${currentRecord.brideMother || ''}`} /></div>
                     </div>
                 </div>
-                
+
                 {/* Section 3: Celebración */}
                 <div className="col-span-full md:col-span-2 lg:col-span-4 mt-2">
                      <h3 className="text-sm font-bold text-[#4B7BA7] uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Celebración y Testigos</h3>

@@ -101,12 +101,12 @@ const ConfirmationPartidasPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // State for data handling
   const [selectedPartida, setSelectedPartida] = useState(null); // Used for InfoBox
   const [selectedRecord, setSelectedRecord] = useState(null); // Used for Modal
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  
+
   const [sortConfig, setSortConfig] = useState({ key: 'entry_number', direction: 'desc' });
   const [parishPrintData, setParishPrintData] = useState({});
   const [isReadingPanelOpen, setIsReadingPanelOpen] = useState(false);
@@ -126,7 +126,7 @@ const ConfirmationPartidasPage = () => {
 
   const loadParishData = () => {
     if (!user?.parishId) return;
-    try { const misDatos = getMisDatosList(user.parishId); if (misDatos && misDatos.length > 0) setParishPrintData(misDatos[0]); } 
+    try { const misDatos = getMisDatosList(user.parishId); if (misDatos && misDatos.length > 0) setParishPrintData(misDatos[0]); }
     catch (err) { console.error("Error loading parish data:", err); }
   };
 
@@ -138,7 +138,7 @@ const ConfirmationPartidasPage = () => {
     try {
         const storedData = localStorage.getItem(key);
         if (storedData) setRecords(JSON.parse(storedData)); else setRecords([]);
-    } catch (error) { console.error("Error loading confirmations:", error); toast({ title: "Error", description: "No se pudieron cargar los registros.", variant: "destructive" }); } 
+    } catch (error) { console.error("Error loading confirmations:", error); toast({ title: "Error", description: "No se pudieron cargar los registros.", variant: "destructive" }); }
     finally { setIsLoading(false); }
   };
 
@@ -184,7 +184,7 @@ const ConfirmationPartidasPage = () => {
   
   const handleViewClick = (row, e) => { 
       e?.stopPropagation(); 
-      setSelectedRecord({...row, godparents: row.godparents || ''}); 
+      setSelectedRecord({...row, godparents: row.godparents || ''});
       setIsViewModalOpen(true); 
   };
 
@@ -220,11 +220,11 @@ const ConfirmationPartidasPage = () => {
                     { 
                         label: (row) => {
                             const isAnnulled = row.status === 'anulada' || row.isAnnulled;
-                            return isAnnulled 
+                            return isAnnulled
                                 ? <XCircle className="w-4 h-4" />
                                 : <CheckCircle className="w-4 h-4" />;
                         },
-                        type: 'verify-status', 
+                        type: 'verify-status',
                         className: (row) => {
                             const isAnnulled = row.status === 'anulada' || row.isAnnulled;
                             return `p-2 rounded-full h-9 w-9 flex items-center justify-center cursor-default ${
@@ -249,7 +249,7 @@ const ConfirmationPartidasPage = () => {
           partida={selectedRecord}
           auxiliaryData={{ ...parishPrintData, diocese: user?.dioceseName || parishPrintData.diocese || 'ARQUIDIÓCESIS', city: user?.city || parishPrintData.ciudad || 'CIUDAD' }}
       />
-      
+
       <ConfirmationReadingSummaryPanel isOpen={isReadingPanelOpen} onClose={() => { setIsReadingPanelOpen(false); setSelectedReadingRecord(null); }} data={selectedReadingRecord} />
     </DashboardLayout>
   );

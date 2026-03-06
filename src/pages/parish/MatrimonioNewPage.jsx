@@ -23,7 +23,7 @@ const MatrimonioNewPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("novio");
   const [cities, setCities] = useState([]);
-  
+
   // Search Modal States
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchTarget, setSearchTarget] = useState(null); // 'novio' or 'novia'
@@ -185,7 +185,7 @@ const MatrimonioNewPage = () => {
         };
 
         localStorage.setItem(storageKey, JSON.stringify([...existing, newExpediente]));
-        
+
         await new Promise(resolve => setTimeout(resolve, 800)); // Simulate api call
 
         toast({
@@ -193,10 +193,10 @@ const MatrimonioNewPage = () => {
             description: "El expediente matrimonial ha sido registrado exitosamente.",
             className: "bg-green-50 border-green-200 text-green-900"
         });
-        
+
         // Optional: Reset or Redirect
-        // navigate('/parroquia/matrimonios'); 
-        
+        // navigate('/parroquia/matrimonios');
+
     } catch (error) {
         console.error(error);
         toast({
@@ -231,9 +231,9 @@ const MatrimonioNewPage = () => {
   const handleSelectBaptismPartidaNovio = (partida) => {
       const entityId = user.parishId || user.dioceseId;
       const confirmations = getConfirmations(entityId);
-      
+
       const partidaName = `${partida.nombres || partida.firstName || ''} ${partida.apellidos || partida.lastName || ''}`.trim().toLowerCase();
-      
+
       const foundConfirmation = confirmations.find(c => {
           const cName = `${c.nombres || c.firstName || ''} ${c.apellidos || c.lastName || ''}`.trim().toLowerCase();
           return cName === partidaName;
@@ -247,7 +247,7 @@ const MatrimonioNewPage = () => {
           novioMadre: partida.nombreMadre || partida.motherName || prev.novioMadre,
           novioFechaNac: partida.fechaNacimiento || partida.birthDate || prev.novioFechaNac,
           novioLugarNac: partida.lugarNacimiento || partida.birthPlace || prev.novioLugarNac,
-          
+
           novioBautizado: true,
           novioBautismoLugar: partida.lugarBautismo || partida.place || prev.novioBautismoLugar,
           novioBautismoLibro: partida.book_number || partida.libro || prev.novioBautismoLibro,
@@ -269,9 +269,9 @@ const MatrimonioNewPage = () => {
   const handleSelectBaptismPartidaNovia = (partida) => {
       const entityId = user.parishId || user.dioceseId;
       const confirmations = getConfirmations(entityId);
-      
+
       const partidaName = `${partida.nombres || partida.firstName || ''} ${partida.apellidos || partida.lastName || ''}`.trim().toLowerCase();
-      
+
       const foundConfirmation = confirmations.find(c => {
           const cName = `${c.nombres || c.firstName || ''} ${c.apellidos || c.lastName || ''}`.trim().toLowerCase();
           return cName === partidaName;
@@ -285,7 +285,7 @@ const MatrimonioNewPage = () => {
           noviaMadre: partida.nombreMadre || partida.motherName || prev.noviaMadre,
           noviaFechaNac: partida.fechaNacimiento || partida.birthDate || prev.noviaFechaNac,
           noviaLugarNac: partida.lugarNacimiento || partida.birthPlace || prev.noviaLugarNac,
-          
+
           noviaBautizado: true,
           noviaBautismoLugar: partida.lugarBautismo || partida.place || prev.noviaBautismoLugar,
           noviaBautismoLibro: partida.book_number || partida.libro || prev.noviaBautismoLibro,
@@ -317,23 +317,23 @@ const MatrimonioNewPage = () => {
   const SacramentSection = ({ prefix, label }) => (
       <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <h4 className="font-bold text-gray-700 text-sm uppercase mb-3 border-b border-gray-300 pb-2">Sacramentos - {label}</h4>
-          
+
           {/* Bautismo */}
           <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
-                  <input 
-                      type="checkbox" 
-                      name={`${prefix}Bautizado`} 
-                      checked={formData[`${prefix}Bautizado`]} 
+                  <input
+                      type="checkbox"
+                      name={`${prefix}Bautizado`}
+                      checked={formData[`${prefix}Bautizado`]}
                       onChange={handleChange}
                       className="w-4 h-4 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]"
                   />
                   <label className="font-bold text-gray-700 text-sm">Bautizado</label>
               </div>
-              
+
               {formData[`${prefix}Bautizado`] && (
-                  <motion.div 
-                      initial={{ opacity: 0, height: 0 }} 
+                  <motion.div
+                      initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       className="grid grid-cols-1 md:grid-cols-12 gap-3 pl-6"
                   >
@@ -365,23 +365,23 @@ const MatrimonioNewPage = () => {
               {/* Confirmacion */}
               <div>
                   <div className="flex items-center gap-2 mb-2">
-                      <input 
-                          type="checkbox" 
-                          name={`${prefix}Confirmado`} 
-                          checked={formData[`${prefix}Confirmado`]} 
+                      <input
+                          type="checkbox"
+                          name={`${prefix}Confirmado`}
+                          checked={formData[`${prefix}Confirmado`]}
                           onChange={handleChange}
                           className="w-4 h-4 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]"
                       />
                       <label className="font-bold text-gray-700 text-sm">Confirmado</label>
                   </div>
                   {formData[`${prefix}Confirmado`] && (
-                       <input 
-                          type="text" 
+                       <input
+                          type="text"
                           placeholder="Lugar de Confirmación"
-                          name={`${prefix}ConfirmacionLugar`} 
-                          value={formData[`${prefix}ConfirmacionLugar`]} 
-                          onChange={handleChange} 
-                          className="w-full h-8 px-2 border border-gray-300 rounded text-sm ml-6" 
+                          name={`${prefix}ConfirmacionLugar`}
+                          value={formData[`${prefix}ConfirmacionLugar`]}
+                          onChange={handleChange}
+                          className="w-full h-8 px-2 border border-gray-300 rounded text-sm ml-6"
                       />
                   )}
               </div>
@@ -389,23 +389,23 @@ const MatrimonioNewPage = () => {
               {/* Primera Comunion */}
               <div>
                   <div className="flex items-center gap-2 mb-2">
-                      <input 
-                          type="checkbox" 
-                          name={`${prefix}PrimeraComunion`} 
-                          checked={formData[`${prefix}PrimeraComunion`]} 
+                      <input
+                          type="checkbox"
+                          name={`${prefix}PrimeraComunion`}
+                          checked={formData[`${prefix}PrimeraComunion`]}
                           onChange={handleChange}
                           className="w-4 h-4 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]"
                       />
                       <label className="font-bold text-gray-700 text-sm">1a. Comunión</label>
                   </div>
                   {formData[`${prefix}PrimeraComunion`] && (
-                       <input 
-                          type="text" 
+                       <input
+                          type="text"
                           placeholder="Lugar de 1a. Comunión"
-                          name={`${prefix}PrimeraComunionLugar`} 
-                          value={formData[`${prefix}PrimeraComunionLugar`]} 
-                          onChange={handleChange} 
-                          className="w-full h-8 px-2 border border-gray-300 rounded text-sm ml-6" 
+                          name={`${prefix}PrimeraComunionLugar`}
+                          value={formData[`${prefix}PrimeraComunionLugar`]}
+                          onChange={handleChange}
+                          className="w-full h-8 px-2 border border-gray-300 rounded text-sm ml-6"
                       />
                   )}
               </div>
@@ -415,7 +415,7 @@ const MatrimonioNewPage = () => {
 
   return (
     <DashboardLayout entityName={user?.parishName || "Parroquia"}>
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -428,14 +428,14 @@ const MatrimonioNewPage = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-w-6xl mx-auto">
-                
+
                 {/* HEADER SECTION */}
                 <div className="bg-gray-50 border-b border-gray-200 p-6">
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 name="numero"
                                 value={formData.numero}
                                 onChange={handleChange}
@@ -444,8 +444,8 @@ const MatrimonioNewPage = () => {
                         </div>
                         <div className="md:col-span-3">
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha</label>
-                            <input 
-                                type="date" 
+                            <input
+                                type="date"
                                 name="fechaExpediente"
                                 value={formData.fechaExpediente}
                                 onChange={handleChange}
@@ -454,12 +454,12 @@ const MatrimonioNewPage = () => {
                         </div>
                         <div className="md:col-span-3 flex pb-2">
                              <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     name="porDecreto"
                                     checked={formData.porDecreto}
                                     onChange={handleChange}
-                                    className="w-5 h-5 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]" 
+                                    className="w-5 h-5 text-[#4B7BA7] border-gray-300 rounded focus:ring-[#4B7BA7]"
                                 />
                                 <span className="font-bold text-gray-700">Por Decreto</span>
                             </label>
@@ -468,39 +468,39 @@ const MatrimonioNewPage = () => {
                 </div>
 
                 <div className="p-6 md:p-8 space-y-8">
-                    
+
                     {/* UPPER SECTION */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Fecha y Hora Prevista</label>
-                            <input 
-                                type="datetime-local" 
-                                name="fechaHoraPrevista" 
-                                value={formData.fechaHoraPrevista} 
-                                onChange={handleChange} 
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white" 
+                            <input
+                                type="datetime-local"
+                                name="fechaHoraPrevista"
+                                value={formData.fechaHoraPrevista}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Presenciaria</label>
-                            <input 
-                                type="text" 
-                                name="presenciaria" 
-                                value={formData.presenciaria} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="presenciaria"
+                                value={formData.presenciaria}
+                                onChange={handleChange}
                                 placeholder="JAIDER HERRERA TURIZO"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white uppercase" 
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white uppercase"
                             />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Lugar de Ceremonia</label>
-                            <input 
-                                type="text" 
-                                name="lugarCeremonia" 
-                                value={formData.lugarCeremonia} 
-                                onChange={handleChange} 
+                            <input
+                                type="text"
+                                name="lugarCeremonia"
+                                value={formData.lugarCeremonia}
+                                onChange={handleChange}
                                 placeholder="PARROQUIA..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white uppercase" 
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900 bg-white uppercase"
                             />
                         </div>
                     </div>
@@ -522,8 +522,8 @@ const MatrimonioNewPage = () => {
                         {/* TAB 1: NOVIO */}
                         <TabsContent value="novio" className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
                              <div className="flex justify-end mb-2">
-                                <Button 
-                                    type="button" 
+                                <Button
+                                    type="button"
                                     onClick={() => handleOpenSearch('novio')}
                                     className="bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200"
                                     size="sm"
@@ -611,8 +611,8 @@ const MatrimonioNewPage = () => {
                         {/* TAB 2: NOVIA */}
                         <TabsContent value="novia" className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                              <div className="flex justify-end mb-2">
-                                <Button 
-                                    type="button" 
+                                <Button
+                                    type="button"
                                     onClick={() => handleOpenSearch('novia')}
                                     className="bg-pink-100 hover:bg-pink-200 text-pink-800 border border-pink-200"
                                     size="sm"
@@ -736,7 +736,7 @@ const MatrimonioNewPage = () => {
                     {/* DECREE SECTION */}
                     <AnimatePresence>
                         {formData.porDecreto && (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
@@ -768,17 +768,17 @@ const MatrimonioNewPage = () => {
                     {/* ACTION BUTTONS & TOOLBAR */}
                     <div className="pt-6 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="flex gap-4 w-full md:w-auto">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={() => handleEntrevista("Novios")}
                                 className="border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50 flex gap-2 w-full md:w-auto"
                             >
                                 <ClipboardList className="w-4 h-4" /> Entrevista Novios
                             </Button>
-                            <Button 
-                                type="button" 
-                                variant="outline" 
+                            <Button
+                                type="button"
+                                variant="outline"
                                 onClick={() => handleEntrevista("Testigos")}
                                 className="border-[#4B7BA7] text-[#4B7BA7] hover:bg-blue-50 flex gap-2 w-full md:w-auto"
                             >
@@ -787,24 +787,24 @@ const MatrimonioNewPage = () => {
                         </div>
 
                         <div className="flex gap-4 w-full md:w-auto justify-end">
-                            <Button 
-                                type="button" 
-                                variant="outline" 
-                                onClick={() => navigate(-1)} 
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => navigate(-1)}
                                 disabled={isSubmitting}
                                 className="gap-2 text-gray-900 border-gray-300 hover:bg-gray-100"
                             >
                                 <X className="w-4 h-4" /> Cancelar
                             </Button>
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={isSubmitting}
                                 className="bg-[#D4AF37] hover:bg-[#C4A027] text-white gap-2 px-8 py-2.5 shadow-lg shadow-yellow-500/20 transition-transform active:scale-95 font-bold w-full md:w-auto"
                             >
                                 {isSubmitting ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                    <Save className="w-4 h-4" /> 
+                                    <Save className="w-4 h-4" />
                                 )}
                                 {isSubmitting ? 'Guardando...' : 'Guardar Expediente'}
                             </Button>
@@ -813,7 +813,7 @@ const MatrimonioNewPage = () => {
                 </div>
             </form>
 
-            <SearchBaptismPartidaModal 
+            <SearchBaptismPartidaModal
                 isOpen={isSearchModalOpen}
                 onClose={handleSelectPartida}
                 onSelectPartida={handleSelectPartida}

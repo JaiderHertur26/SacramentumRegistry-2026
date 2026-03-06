@@ -86,8 +86,8 @@ const MatrimonioSeatBatchPage = () => {
                     <thead className="bg-gray-50 border-b border-gray-200 font-semibold text-gray-600 uppercase tracking-wider text-xs">
                         <tr>
                             <th className="px-6 py-4 w-12 text-center">
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     onChange={(e) => handleSelectAll(e.target.checked)}
                                     checked={selectedIds.length === pending.length && pending.length > 0}
                                     className="w-4 h-4 rounded border-gray-300 text-[#4B7BA7] focus:ring-[#4B7BA7]"
@@ -101,8 +101,8 @@ const MatrimonioSeatBatchPage = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {pending.map((item, index) => (
-                            <tr 
-                                key={item.id} 
+                            <tr
+                                key={item.id}
                                 className={`transition-colors cursor-pointer ${selectedIds.includes(item.id) ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}
                                 onClick={() => toggleSelection(item.id)}
                             >
@@ -122,7 +122,7 @@ const MatrimonioSeatBatchPage = () => {
                                     <input 
                                         type="checkbox" 
                                         checked={selectedIds.includes(item.id)}
-                                        onChange={() => {}} 
+                                        onChange={() => {}}
                                         className="w-4 h-4 rounded border-gray-300 text-[#4B7BA7] focus:ring-[#4B7BA7]"
                                     />
                                 </td>
@@ -148,7 +148,7 @@ const MatrimonioSeatBatchPage = () => {
                         <Button variant="outline" className="flex-1 md:flex-none gap-2" onClick={() => navigate('/parroquia/dashboard')}>
                             <X className="w-4 h-4" /> Cancelar
                         </Button>
-                        <Button 
+                        <Button
                             className="flex-1 md:flex-none bg-[#4B7BA7] hover:bg-[#3A6286] text-white gap-2 shadow-md"
                             disabled={selectedIds.length === 0}
                             onClick={handleBatchConfirm}
