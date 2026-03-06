@@ -107,12 +107,9 @@ const BaptismNewPage = () => {
       loadParishInfo();
   }, [user, getMisDatosList]);
 
-  // SOLUCIÓN: Programación defensiva para evitar TypeError
   useEffect(() => {
       if (user?.parishId || user?.dioceseId) {
-          const list = typeof getCiudadesList === 'function' 
-              ? getCiudadesList(user.parishId || user.dioceseId) 
-              : [];
+          const list = getCiudadesList(user.parishId || user.dioceseId);
           setCities(list);
       }
   }, [user, getCiudadesList]);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
@@ -25,9 +24,7 @@ const ParishNotificationsPage = () => {
         if (user?.parishId) {
             setIsLoading(true);
             const parishNotifs = getParishNotifications(user.parishId);
-            // Filter out matrimonial notifications as they have their own page (NotificationWarningPage)
-            const officialNotifs = parishNotifs.filter(n => n.type !== 'matrimonial_notification');
-            setNotifications(officialNotifs);
+            setNotifications(parishNotifs);
             setIsLoading(false);
         }
     }, [user, getParishNotifications]);

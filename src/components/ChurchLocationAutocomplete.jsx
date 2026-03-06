@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Check, ChevronsUpDown } from 'lucide-react';
 import { useAppData } from '@/context/AppDataContext';

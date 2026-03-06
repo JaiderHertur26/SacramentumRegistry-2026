@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for converting dates, times, and numbers to Spanish text.
  */

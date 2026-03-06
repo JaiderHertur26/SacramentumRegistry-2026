@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Church, LogOut, Settings as SettingsIcon, LayoutDashboard, Users, Network, ChevronRight, Database, Sliders, HeartHandshake as Handshake, ScrollText, Heart, List, FileText, Bell, AlertCircle, Mail } from 'lucide-react';
@@ -119,7 +120,7 @@ const SidebarItem = ({ item, isActive, isChild = false, badgeCount }) => {
 const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
   const location = useLocation();
   const { user } = useAuth();
-  const { getParishNotifications } = useAppData();
+  const { getParishNotifications, matrimonialNotificationAvisos } = useAppData();
   
   let menuItems = [];
 
@@ -128,13 +129,18 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
     : String(role || '');
   
   const [notificationCount, setNotificationCount] = useState(0);
+  const [avisosCount, setAvisosCount] = useState(0);
 
   useEffect(() => {
     if (safeRole === ROLE_TYPES.PARISH && user?.parishId) {
         const notifications = getParishNotifications(user.parishId);
         setNotificationCount(notifications.length);
+        
+        // Count pending avisos
+        const pendingAvisos = (matrimonialNotificationAvisos || []).filter(a => a.status === 'pendiente');
+        setAvisosCount(pendingAvisos.length);
     }
-  }, [location, getParishNotifications, user, safeRole]);
+  }, [location, getParishNotifications, matrimonialNotificationAvisos, user, safeRole]);
 
 
   if (menuItems.length === 0) {
@@ -155,7 +161,6 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
         menuItems = [
             { label: 'Dashboard', path: '/parish/dashboard', icon: LayoutDashboard },
             { label: 'Notificaciones Cancillería', path: '/parish/notifications', icon: Bell, badgeCount: notificationCount },
-            { label: 'Aviso Notificación Matrimonial', path: '/parroquia/aviso-notificacion', icon: AlertCircle },
             {
                 label: 'Bautismo',
                 icon: Church,
@@ -182,7 +187,8 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
             },
             { 
                 label: 'Matrimonio',
-                icon: Heart, 
+                icon: Heart,
+                badgeCount: avisosCount,
                 children: [
                     { label: 'Nuevo Matrimonio', path: '/parroquia/matrimonio/nuevo' },
                     { label: 'Matrimonio ya Celebrado', path: '/parroquia/matrimonio/celebrado' },
@@ -191,6 +197,7 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
                     { label: 'Partidas', path: '/parroquia/matrimonio/partidas' },
                     { label: 'Índice General', path: '/parroquia/matrimonio/indice', icon: List },
                     { label: 'Notificación Matrimonial', path: '/parroquia/matrimonio/notificacion', icon: Mail },
+                    { label: 'Aviso Notificación Matrimonial', path: '/parroquia/matrimonio/aviso-notificacion', icon: AlertCircle, badgeCount: avisosCount },
                 ]
             },
             { label: 'Datos Auxiliares', path: '/datos-auxiliares', icon: Database },

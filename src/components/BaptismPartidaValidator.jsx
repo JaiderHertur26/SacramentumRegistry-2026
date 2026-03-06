@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { normalizeBaptismPartida, validateBaptismPartidaStructure } from '@/utils/baptismDataNormalizer';
 import { Button } from '@/components/ui/button';

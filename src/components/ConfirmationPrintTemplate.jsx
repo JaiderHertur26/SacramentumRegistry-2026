@@ -1,4 +1,3 @@
-
 import React, { forwardRef } from 'react';
 import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
 import { useAppData } from '@/context/AppDataContext';

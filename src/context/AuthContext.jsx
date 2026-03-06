@@ -1,6 +1,5 @@
-
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { validateUserCredentials, initializeAdminUser } from '@/utils/authUtils';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAppData } from '@/context/AppDataContext';
 import { logAuthEvent } from '@/utils/authLogger';
 import { ROLE_TYPES } from '@/config/supabaseConfig';
 
@@ -10,102 +9,108 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /**
-   * Standardizes user object structure across the app.
-   * Ensures parishId and dioceseId are always strings and correctly named.
-   */
-  const sanitizeUser = useCallback((u) => {
+  const { validateUserCredentials } = useAppData();
+
+  // Helper to sanitize user object
+  const sanitizeUser = (u) => {
       if (!u) return null;
-
-      const safeStr = (v) => (v === null || v === undefined) ? '' : String(v);
-
-      const extractId = (val) => {
-          if (!val) return '';
-          if (typeof val === 'string' || typeof val === 'number') return String(val);
-          if (typeof val === 'object') return String(val.id || val.parishId || val.dioceseId || '');
-          return '';
+      const safeString = (val) => {
+          if (typeof val === 'string') return val;
+          if (typeof val === 'object' && val !== null) {
+              return val.name || val.username || val.label || val.role || '';
+          }
+          return String(val || '');
       };
 
-      const parishId = extractId(u.parishId || u.parish_id || u.parroquiaId || (u.parish && u.parish.id));
-      const dioceseId = extractId(u.dioceseId || u.diocese_id || u.diocesisId || (u.diocese && u.diocese.id));
-
-      const sanitized = {
+      return {
           ...u,
-          id: extractId(u.id || u.uid),
-          username: safeStr(u.username || u.user || u.name),
-          role: safeStr(u.role?.name || u.role),
-          parishId: parishId,
-          dioceseId: dioceseId,
-          parishName: safeStr(u.parishName || u.parroquia),
-          dioceseName: safeStr(u.dioceseName || u.diocesis),
-          chancelleryName: safeStr(u.chancelleryName || u.chancilleria)
+          username: safeString(u.username),
+          role: safeString(u.role),
+          parishName: safeString(u.parishName),
+          dioceseName: safeString(u.dioceseName),
+          chancelleryName: safeString(u.chancelleryName)
       };
+  };
 
-      return sanitized;
-  }, []);
-
-  // Load session on startup
+  /* =========================
+     LOAD SESSION
+  ========================= */
   useEffect(() => {
-    initializeAdminUser();
-    const stored = localStorage.getItem('currentUser');
-    if (stored) {
+    const storedUser = localStorage.getItem('currentUser');
+
+    if (storedUser) {
       try {
-        const parsed = JSON.parse(stored);
-        if (parsed) {
-            setUser(sanitizeUser(parsed));
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser) {
+            const sanitizedUser = sanitizeUser(parsedUser);
+            setUser(sanitizedUser);
+            // Log successful session restoration
+            logAuthEvent(sanitizedUser, 'SESSION_RESTORED');
         }
-      } catch (e) {
-        console.error("Auth: Session restoration failed", e);
+      } catch {
         localStorage.removeItem('currentUser');
       }
     }
-    setLoading(false);
-  }, [sanitizeUser]);
 
-  /**
-   * Log in a user with username and password.
-   * Uses authUtils for validation to avoid circular context dependency.
-   */
+    setLoading(false);
+  }, []);
+
+  /* =========================
+     LOGIN
+  ========================= */
   const login = (username, password) => {
     try {
-      const rawUser = validateUserCredentials(username, password);
-      if (!rawUser) {
+      console.log('🔐 Intento de login:', username);
+
+      const validUser = validateUserCredentials(username, password);
+
+      if (!validUser) {
+        console.warn('❌ Credenciales inválidas');
         return { success: false, error: 'Usuario o contraseña incorrectos' };
       }
 
-      const sanitized = sanitizeUser(rawUser);
-      setUser(sanitized);
-      localStorage.setItem('currentUser', JSON.stringify(sanitized));
-      logAuthEvent(sanitized, 'LOGIN_SUCCESS');
+      const sanitizedUser = sanitizeUser(validUser);
+      setUser(sanitizedUser);
+      localStorage.setItem('currentUser', JSON.stringify(sanitizedUser));
+      
+      // Log successful login
+      logAuthEvent(sanitizedUser, 'LOGIN_SUCCESS');
 
-      // Sync other parts of the app
-      window.dispatchEvent(new Event('storage'));
+      return {
+        success: true,
+        user: sanitizedUser,
+        redirectPath: getRedirectPath(sanitizedUser.role)
+      };
 
-      let path = '/';
-      if (sanitized.role === ROLE_TYPES.ADMIN_GENERAL) path = '/admin/dashboard';
-      else if (sanitized.role === ROLE_TYPES.PARISH) path = '/parish/dashboard';
-      else if (sanitized.role === ROLE_TYPES.DIOCESE) path = '/diocese/dashboard';
-      else if (sanitized.role === ROLE_TYPES.CHANCERY) path = '/chancery/dashboard';
-
-      return { success: true, user: sanitized, redirectPath: path };
     } catch (err) {
-      return { success: false, error: err?.message || 'Error durante el inicio de sesión' };
+      console.error('🔥 Error en login:', err);
+      return {
+        success: false,
+        error: err?.message || 'Error durante el inicio de sesión'
+      };
     }
   };
 
-  /**
-   * Log out the current user and clear session.
-   */
+  /* =========================
+     LOGOUT
+  ========================= */
   const logout = () => {
-    if (user) logAuthEvent(user, 'LOGOUT');
+    if (user) {
+      logAuthEvent(user, 'LOGOUT');
+    }
     setUser(null);
     localStorage.removeItem('currentUser');
-    window.dispatchEvent(new Event('storage'));
   };
 
+  const isAuthenticated = () => !!user;
+
+  /* =========================
+     ROUTING BY ROLE
+  ========================= */
   const getRedirectPath = (role) => {
-    const r = String(role || '');
-    switch (r) {
+    const roleStr = String(role || '');
+    
+    switch (roleStr) {
       case ROLE_TYPES.ADMIN_GENERAL: return '/admin/dashboard';
       case ROLE_TYPES.DIOCESE: return '/diocese/dashboard';
       case ROLE_TYPES.PARISH: return '/parish/dashboard';
@@ -114,19 +119,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const hasRole = (allowedRoles) => {
+    if (!user) return false;
+    const userRole = String(user.role || '');
+    
+    // Normalize allowedRoles to array
+    const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+    
+    return rolesArray.includes(userRole);
+  };
+
+  /* =========================
+     PROVIDER
+  ========================= */
   return (
     <AuthContext.Provider value={{
-        user,
-        login,
-        logout,
-        loading,
-        isAuthenticated: !!user,
-        getRedirectPath,
-        hasRole: (allowed) => {
-            if (!user) return false;
-            const current = String(user.role || '');
-            return Array.isArray(allowed) ? allowed.includes(current) : current === allowed;
-        }
+      user,
+      login,
+      logout,
+      loading,
+      isAuthenticated,
+      getRedirectPath,
+      hasRole
     }}>
       {children}
     </AuthContext.Provider>
@@ -135,6 +149,8 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  if (!context) {
+    throw new Error('useAuth debe usarse dentro de AuthProvider');
+  }
   return context;
 };

@@ -1,4 +1,3 @@
-
 /**
  * LocalStorage management for Universal Backups
  * Handles CRUD operations against the "universalBackups" key

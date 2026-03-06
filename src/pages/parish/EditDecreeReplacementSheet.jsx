@@ -1,5 +1,2 @@
-
-import DecreeReplacementEdit from './DecreeReplacementEdit';
-
-// Re-export the component to match the route definition in App.jsx
-export default DecreeReplacementEdit;
+// OBSOLETE - Consolidated into EditDecreeRepositionSheet.jsx
+export default function ObsoleteEditDecreeReplacementSheet() { return null; }

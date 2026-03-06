@@ -9,20 +9,15 @@ const CreateArchdioceseModal = ({ isOpen, onClose }) => {
   const { createArchdiocese } = useAppData();
   const { toast } = useToast();
   const [formData, setFormData] = useState({ name: '', abbreviation: '', bishop: '', city: '', region: '', phone: '', email: '' });
-  
-  const handleSubmit = async (e) => {
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.name || !formData.bishop || !formData.city) {
         toast({ title: 'Error', description: 'Campos obligatorios faltantes', variant: 'destructive' });
         return;
     }
-     
-    const result = await createArchdiocese(formData);
-    if (!result?.success) {
-      toast({ title: 'Error', description: result?.message || 'No se pudo guardar en Supabase', variant: 'destructive' });
-      return;
-    }
 
+    createArchdiocese(formData); 
     toast({ title: 'Éxito', description: 'Arquidiócesis creada correctamente.' });
     setFormData({ name: '', abbreviation: '', bishop: '', city: '', region: '', phone: '', email: '' });
     onClose();

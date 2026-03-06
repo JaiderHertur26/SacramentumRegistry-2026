@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Scissors } from 'lucide-react';
 

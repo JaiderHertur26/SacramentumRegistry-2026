@@ -1,4 +1,3 @@
-
 import React, { forwardRef } from 'react';
 
 const BaptismIndexPrintTemplate = forwardRef((props, ref) => {

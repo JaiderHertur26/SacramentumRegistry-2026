@@ -1,33 +1,18 @@
+
 import React, { forwardRef } from 'react';
-import { 
-    convertDateToSpanishText, 
-    convertNumberToSpanishWords,
-    convertMonthToSpanishWords,
-    convertYearToSpanishWords 
-} from '@/utils/dateTimeFormatters';
+import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
 import { useAppData } from '@/context/AppDataContext';
 import { useAuth } from '@/context/AuthContext';
 import { getActivePriest } from '@/utils/getActivePriest';
-import { dateToSpanishLegalText } from '@/utils/dateToSpanishLegalText.js';
 
 const BaptismPrintTemplate = forwardRef((props, ref) => {
   const { user } = useAuth();
-  const { 
-    getParrocos, 
-    generarNotaAlMargenAnulada, 
-    generarNotaAlMargenNuevaPartida, 
-    generarNotaAlMargenEstandar,
-    getBaptismCorrections,
-    getConceptosAnulacion,
-    obtenerNotasAlMargen
-  } = useAppData();
+  const appDataContext = useAppData();
+  const { getParrocos } = appDataContext;
 
   const parrocos = user?.parishId ? getParrocos(user.parishId) : [];
   const activePriestName = getActivePriest(parrocos);
-  const conceptos = user?.parishId ? getConceptosAnulacion(user.parishId) : [];
-  const notasAlMargenTemplates = obtenerNotasAlMargen(user?.parishId);
 
-  // Defensive: Try to use props.data if it exists (normalized object), otherwise fallback to individual props
   const dataSource = props.data || props;
 
   const {
@@ -50,20 +35,15 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
     padrinos,
     ministro,
     notaAlMargen,
-    notaMarginalMatrimonio,
-    // Civil Registry Data
-    registrySerial,
-    registryDate,
-    // If the data object has enriched parroquiaInfo, use it. Otherwise fallback to props.
+    notaMarginal,
     parroquiaInfo = {},
-    conceptoAnulacionId
   } = dataSource;
 
   const finalParrocoName = activePriestName;
   
   const finalParroquiaInfo = {
-      ...(props.parroquiaInfo || {}), // Props base
-      ...parroquiaInfo // Enriched data override
+      ...(props.parroquiaInfo || {}),
+      ...parroquiaInfo
   };
 
   const {
@@ -82,142 +62,18 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
   
   const formatDate = (d) => {
       try {
+          if (!d) return '---';
           return convertDateToSpanishText(d);
       } catch (e) {
-          console.error("Error formatting date for print:", d, e);
           return d || '---';
       }
   };
 
-  // Logic to generate the dynamic marginal note text
-  const generateMarginalNote = () => {
-      let resultText = "";
-      const currentSpanishDate = dateToSpanishLegalText(new Date());
-
-      // 0. NEW: Check if there is a Matrimonial Notification Note
-      if (notaMarginalMatrimonio) {
-          return notaMarginalMatrimonio;
-      }
-
-      // 1. Check if this baptism is involved in a correction decree (either as original or new)
-      if (dataSource.id) {
-          const corrections = getBaptismCorrections(user?.parishId) || [];
-          
-          // Case A: This is the original annulled partida
-          const decreeAsOriginal = corrections.find(c => String(c.originalPartidaId) === String(dataSource.id));
-          if (decreeAsOriginal) {
-              const newPartidaSummary = decreeAsOriginal.newPartidaSummary || {};
-              const newPartidaData = {
-                  libro: newPartidaSummary.book || newPartidaSummary.book_number || '___',
-                  folio: newPartidaSummary.page || newPartidaSummary.page_number || '___',
-                  numero: newPartidaSummary.entry || newPartidaSummary.entry_number || '___'
-              };
-              const decreeData = {
-                  numero: decreeAsOriginal.decreeNumber,
-                  fecha: decreeAsOriginal.decreeDate
-              };
-              resultText = generarNotaAlMargenAnulada(newPartidaData, decreeData, user?.parishId);
-          }
-          // Case B: This is the new partida created by correction
-          else {
-            const decreeAsNew = corrections.find(c => String(c.newPartidaId) === String(dataSource.id));
-            if (decreeAsNew) {
-                const originalPartidaSummary = decreeAsNew.originalPartidaSummary || {};
-                const partidaAnulada = {
-                    libro: originalPartidaSummary.book || originalPartidaSummary.book_number || '___',
-                    folio: originalPartidaSummary.page || originalPartidaSummary.page_number || '___',
-                    numero: originalPartidaSummary.entry || originalPartidaSummary.entry_number || '___'
-                };
-                const decreeData = {
-                    numero: decreeAsNew.decreeNumber,
-                    fecha: decreeAsNew.decreeDate,
-                    oficina: 'Cancillería' // Can be enhanced if we store office in decree
-                };
-                
-                // We try to find the concept to see if it has specific office info, though not strictly required by prompt
-                const concept = conceptos.find(c => c.id === decreeAsNew.conceptoAnulacionId);
-                if (concept && concept.expide) {
-                    decreeData.oficina = concept.expide;
-                }
-
-                resultText = generarNotaAlMargenNuevaPartida(partidaAnulada, decreeData, activePriestName, user?.parishId);
-            }
-          }
-      }
-
-      // 2. Fallback: Manual Concept Selection (for preview before saving) or Legacy Data
-      if (!resultText && conceptoAnulacionId) {
-          const concept = conceptos.find(c => c.id === conceptoAnulacionId);
-          if (concept) {
-              const { notaAlMargenId } = concept;
-              
-              // If we are previewing and don't have decree data in 'corrections' yet, 
-              // we might have it in props or dataSource from the form state.
-              if (dataSource.previewDecreeData) {
-                   const { decreeData, relatedPartidaData, isAnnulled } = dataSource.previewDecreeData;
-                   if (isAnnulled) {
-                       resultText = generarNotaAlMargenAnulada(relatedPartidaData, decreeData, user?.parishId);
-                   } else {
-                       resultText = generarNotaAlMargenNuevaPartida(relatedPartidaData, decreeData, activePriestName, user?.parishId);
-                   }
-              }
-
-              if (!resultText && notaAlMargenId === 'estandar') {
-                   resultText = generarNotaAlMargenEstandar(user?.parishId);
-              }
-          }
-      }
-
-      // 3. Fallback: Check status flags (Legacy compatibility)
-      if (!resultText && dataSource.status === 'anulada') {
-          // Minimal fallback if decree lookup failed but status is set
-          resultText = "PARTIDA ANULADA. (Consulte el archivo de decretos para más detalles).";
-      }
-
-      // 4. Standard Marginal Note or Default
-      if (!resultText) {
-          resultText = generarNotaAlMargenEstandar(user?.parishId);
-      }
-      
-      // 5. Hardcoded Default (Absolute fallback if even standard text is empty)
-      if (!resultText) {
-          const today = new Date();
-          const currentDay = today.getDate();
-          const currentMonth = today.getMonth() + 1; 
-          const currentYear = today.getFullYear();
-
-          const dayText = convertNumberToSpanishWords(currentDay);
-          const monthText = convertMonthToSpanishWords(currentMonth);
-          const yearText = convertYearToSpanishWords(currentYear);
-
-          const locationText = ubicacion 
-            ? `${ciudadParroquia}, ${departamentoParroquia}`.toUpperCase()
-            : 'ESTA PARROQUIA';
-
-          let baseText = "";
-
-          if (notaAlMargen && notaAlMargen.trim().length > 0) {
-              baseText = notaAlMargen.trim();
-              if (!baseText.endsWith('.')) baseText += ". ";
-              else baseText += " ";
-          } else if (registrySerial) {
-              const regDateFormatted = registryDate ? formatDate(registryDate) : '---';
-              baseText = `REGISTRO CIVIL SERIAL No. ${registrySerial}, EXPEDIDO POR REGISTRADURÍA NACIONAL DEL ESTADO CIVIL EN FECHA ${regDateFormatted}. `;
-          } else {
-              baseText = "SIN NOTA MARGINAL DE MATRIMONIO HASTA LA FECHA. ";
-          }
-
-          baseText += `LA INFORMACIÓN SUMINISTRADA ES FIEL A LA CONTENIDA EN EL LIBRO. SE EXPIDE EN ${locationText} - COLOMBIA EL DÍA ${dayText} DE ${monthText} DE ${yearText}.`;
-          resultText = baseText;
-      }
-
-      // FINAL: Replace dynamic placeholder with current date
-      if (resultText) {
-          return resultText.replace(/\[FECHA_EXPEDICION\]/g, currentSpanishDate);
-      }
-
-      return "";
-  };
+  // CRITICAL FIX: We only want the final, processed marginal note.
+  // If we have both, we prioritize notaAlMargen as it usually contains the updated string.
+  // We trim to check if it's actually content or just whitespace.
+  const finalNote = (notaAlMargen || notaMarginal || "").trim();
+  const showNote = !!finalNote && finalNote !== "";
 
   const padLabel = (label, width = 22) =>
     label.padEnd(width, '.');
@@ -260,18 +116,20 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
         textAlign: 'center',
         fontSize: '11px',
         fontWeight: 'bold',
-        marginBottom: '5px'
+        marginBottom: '8px'
     },
     marginalNoteContent: {
         textAlign: 'justify',
         fontSize: '11px',
         fontStyle: 'italic',
+        whiteSpace: 'pre-wrap',
+        lineHeight: '1.4'
     },
     marginalNoteFooterLine: {
         textAlign: 'center',
         fontSize: '11px',
         fontWeight: 'bold',
-        marginTop: '5px'
+        marginTop: '8px'
     },
 
     signature: {
@@ -333,18 +191,20 @@ const BaptismPrintTemplate = forwardRef((props, ref) => {
         <div style={styles.row}>{padLabel('DA FE')} : {finalParrocoName}</div>
       </div>
 
-      {/* NOTA MARGINAL */}
-      <div style={styles.marginalNoteContainer}>
-          <div style={styles.marginalNoteHeader}>
-            - - - - - - - - - - - - - - - - - NOTA AL MARGEN - - - - - - - - - - - - - - - - -
-          </div>
-          <div style={styles.marginalNoteContent}>
-              {generateMarginalNote()}
-          </div>
-          <div style={styles.marginalNoteFooterLine}>
-            - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-          </div>
-      </div>
+      {/* NOTA MARGINAL - RENDERING FIXED TO SHOW ONLY ONE CLEAN NOTE */}
+      {showNote && (
+        <div style={styles.marginalNoteContainer}>
+            <div style={styles.marginalNoteHeader}>
+              - - - - - NOTA AL MARGEN - - - - -
+            </div>
+            <div className="nota-al-margen" style={styles.marginalNoteContent}>
+                {finalNote}
+            </div>
+            <div style={styles.marginalNoteFooterLine}>
+              - - - - - - - - - - - - - - - - - - - - -
+            </div>
+        </div>
+      )}
 
       {/* FIRMA */}
       <div style={styles.signature}>

@@ -4,12 +4,12 @@ import { useAppData } from '@/context/AppDataContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Search, Edit, Trash2, Plus } from 'lucide-react';
+import { Search, Edit, Trash2, Plus, FileText } from 'lucide-react';
 import Table from '@/components/ui/Table';
 import CreateAnnulmentConceptModal from '@/components/modals/CreateAnnulmentConceptModal';
 import EditAnnulmentConceptModal from '@/components/modals/EditAnnulmentConceptModal';
 
-const AnnulmentConceptsTab = () => {
+const AnnulmentConceptsTab = ({ onSelectConcept }) => {
     const { user } = useAuth();
     const { getConceptosAnulacion, deleteConceptoAnulacion } = useAppData();
     const { toast } = useToast();
@@ -67,6 +67,18 @@ const AnnulmentConceptsTab = () => {
         setIsEditOpen(true);
     };
 
+    const handleSelectForNotes = (concept, e) => {
+        e?.stopPropagation();
+        if (onSelectConcept) {
+            onSelectConcept(concept);
+            toast({
+                title: "Concepto Seleccionado",
+                description: `Generando nota marginal para: ${concept.concepto}`,
+                className: "bg-blue-600 text-white"
+            });
+        }
+    };
+
     const columns = [
         { header: 'Código', render: (row) => <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{row.codigo}</span> },
         { header: 'Concepto', render: (row) => <span className="font-semibold text-gray-900">{row.concepto}</span> },
@@ -89,6 +101,9 @@ const AnnulmentConceptsTab = () => {
                 } else if (row.tipo === 'porNulidad') {
                     badgeClass = 'bg-amber-50 text-amber-600';
                     label = 'Por Nulidad';
+                } else if (row.concepto?.toLowerCase().includes('notificaci')) {
+                    badgeClass = 'bg-indigo-50 text-indigo-600';
+                    label = 'Notificación';
                 }
 
                 return (
@@ -125,6 +140,7 @@ const AnnulmentConceptsTab = () => {
                     data={filteredConcepts} 
                     isLoading={isLoading}
                     actions={[
+                        { label: <FileText className="w-4 h-4" />, type: 'select', onClick: handleSelectForNotes, className: "text-green-600 hover:bg-green-50 p-2 rounded-full", title: "Generar Nota Marginal" },
                         { label: <Edit className="w-4 h-4" />, type: 'edit', onClick: handleEdit, className: "text-[#4B7BA7] hover:bg-blue-50 p-2 rounded-full", title: "Editar" },
                         { label: <Trash2 className="w-4 h-4" />, type: 'delete', onClick: (row, e) => handleDelete(row.id, e), className: "text-red-500 hover:bg-red-50 p-2 rounded-full", title: "Eliminar" }
                     ]}

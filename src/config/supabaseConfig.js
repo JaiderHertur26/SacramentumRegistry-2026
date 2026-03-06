@@ -1,4 +1,3 @@
-
 // supabaseConfig.js
 // Central configuration for Supabase integration
 // Single Source of Truth for tables, roles and schema contracts

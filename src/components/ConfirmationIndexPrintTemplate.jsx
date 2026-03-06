@@ -1,4 +1,3 @@
-
 import React, { forwardRef } from 'react';
 
 const ConfirmationIndexPrintTemplate = forwardRef((props, ref) => {

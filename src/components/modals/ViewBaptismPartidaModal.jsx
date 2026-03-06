@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BaptismPrintTemplate from '@/components/BaptismPrintTemplate';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,8 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
     const printComponentRef = useRef();
 
     if (!isOpen || !partida) return null;
+
+    const hasMarginNote = !!partida.marginNote || !!partida.notaMarginal;
 
     const handlePrint = () => {
         const printContent = printComponentRef.current;
@@ -50,6 +52,9 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
                             <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                                 <span className="bg-blue-100 text-blue-700 p-1.5 rounded-md text-xs">VISTA PREVIA</span>
                                 Partida de Bautismo
+                                {(partida.type === 'replacement' || partida.createdByDecree === 'replacement') && (
+                                     <span className="bg-yellow-200 text-yellow-800 p-1.5 rounded-md text-xs ml-2 border border-yellow-300 shadow-sm">POR DECRETO (REPOSICIÓN)</span>
+                                )}
                             </h2>
                             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-gray-200">
                                 <X className="w-5 h-5 text-gray-500" />
@@ -57,7 +62,43 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
                         </div>
 
                         {/* Content - Scrollable Preview Area */}
-                        <div className="flex-1 overflow-auto bg-gray-100 p-8 flex justify-center">
+                        <div className="flex-1 overflow-auto bg-gray-100 p-8 flex flex-col items-center gap-6">
+                            
+                            {/* Visual Display for Metadata outside of Print Template */}
+                            {hasMarginNote && (
+                                <div className="w-[8.5in] border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg shadow-sm print:hidden mb-2 relative overflow-hidden">
+                                     <div className="absolute top-0 right-0 -mr-6 -mt-6 text-yellow-200 opacity-20 pointer-events-none">
+                                         <BookOpen className="w-32 h-32" />
+                                     </div>
+                                     <h4 className="text-sm font-bold text-yellow-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                         <BookOpen className="w-4 h-4" /> Nota Marginal Activa
+                                     </h4>
+                                     
+                                     {partida.marginNote ? (
+                                         <div className="relative z-10 font-mono text-sm leading-relaxed whitespace-pre-wrap text-yellow-900">
+                                             <p className="mb-2">{partida.marginNote.text}</p>
+                                             <div className="flex gap-4 mt-3 pt-2 border-t border-yellow-300 text-xs">
+                                                 <span className="bg-white/50 px-2 py-1 rounded border border-yellow-200">
+                                                    <strong>Aplicado el:</strong> {partida.marginNote.appliedDate || '-'}
+                                                 </span>
+                                                 <span className="bg-white/50 px-2 py-1 rounded border border-yellow-200">
+                                                    <strong>Decreto No:</strong> {partida.marginNote.appliedByDecree || '-'}
+                                                 </span>
+                                                 {partida.marginNote.type && (
+                                                     <span className="bg-white/50 px-2 py-1 rounded border border-yellow-200 capitalize">
+                                                        <strong>Tipo:</strong> {partida.marginNote.type}
+                                                     </span>
+                                                 )}
+                                             </div>
+                                         </div>
+                                     ) : (
+                                         <div className="relative z-10 font-mono text-sm leading-relaxed whitespace-pre-wrap text-yellow-900">
+                                             {partida.notaMarginal}
+                                         </div>
+                                     )}
+                                </div>
+                            )}
+
                             <div className="shadow-2xl bg-white print:shadow-none min-h-[11in] w-[8.5in]">
                                 <div ref={printComponentRef}>
                                     <BaptismPrintTemplate 
