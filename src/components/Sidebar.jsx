@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Church, LogOut, Settings as SettingsIcon, LayoutDashboard, Users, Network, ChevronRight, Database, Sliders, HeartHandshake as Handshake, ScrollText, Heart, List, FileText, Bell, AlertCircle, Mail } from 'lucide-react';
+import { Church, LogOut, Settings as SettingsIcon, LayoutDashboard, Users, Network, ChevronRight, Database, Sliders, HeartHandshake as Handshake, ScrollText, Heart, List, FileText, Bell, AlertCircle, Mail, FolderSearch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_TYPES } from '@/config/supabaseConfig';
 import { useAppData } from '@/context/AppDataContext';
@@ -161,6 +161,7 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
         menuItems = [
             { label: 'Dashboard', path: '/parish/dashboard', icon: LayoutDashboard },
             { label: 'Notificaciones Cancillería', path: '/parish/notifications', icon: Bell, badgeCount: notificationCount },
+            { label: 'Archivo Sacramental', path: '/parroquia/archivo', icon: FolderSearch },
             {
                 label: 'Bautismo',
                 icon: Church,
@@ -169,7 +170,6 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
                     { label: 'Bautismo ya Celebrado', path: '/parroquia/bautismo/celebrado' },
                     { label: 'Sentar Registros', path: '/parroquia/bautismo/sentar-registros' },
                     { label: 'Editar Bautizo', path: '/parroquia/bautismo/editar' },
-                    { label: 'Partidas', path: '/parroquia/bautismo/partidas' },
                     { label: 'Índice General', path: '/parroquia/bautismo/indice', icon: List },
                 ]
             },
@@ -181,7 +181,6 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
                     { label: 'Confirmación ya Celebrada', path: '/parroquia/confirmacion/celebrado' },
                     { label: 'Sentar Registros', path: '/parroquia/confirmacion/sentar-registros' },
                     { label: 'Editar Confirmación', path: '/parroquia/confirmacion/editar' },
-                    { label: 'Partidas', path: '/parroquia/confirmacion/partidas' },
                     { label: 'Índice General', path: '/parroquia/confirmacion/indice', icon: List },
                 ]
             },
@@ -194,7 +193,6 @@ const Sidebar = ({ isOpen, onClose, onLogout, role }) => {
                     { label: 'Matrimonio ya Celebrado', path: '/parroquia/matrimonio/celebrado' },
                     { label: 'Sentar Registros', path: '/parroquia/matrimonio/sentar-registros' },
                     { label: 'Editar Matrimonio', path: '/parroquia/matrimonio/editar' },
-                    { label: 'Partidas', path: '/parroquia/matrimonio/partidas' },
                     { label: 'Índice General', path: '/parroquia/matrimonio/indice', icon: List },
                     { label: 'Notificación Matrimonial', path: '/parroquia/matrimonio/notificacion', icon: Mail },
                     { label: 'Aviso Notificación Matrimonial', path: '/parroquia/matrimonio/aviso-notificacion', icon: AlertCircle, badgeCount: avisosCount },

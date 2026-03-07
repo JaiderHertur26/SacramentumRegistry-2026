@@ -67,6 +67,7 @@ import ParishDashboard from '@/pages/parish/ParishDashboard';
 import ParroquiaAjustesPage from '@/pages/parish/ParroquiaAjustesPage';
 import DatosAuxiliaresPage from '@/pages/parish/DatosAuxiliaresPage';
 import ParishNotificationsPage from '@/pages/parish/ParishNotificationsPage';
+import PartidasSearchPage from '@/pages/parish/PartidasSearchPage';
 
 /* --- BAPTISM --- */
 import BaptismNewPage from '@/pages/parish/BaptismNewPage';
@@ -194,6 +195,7 @@ const AppContent = () => {
                 <Route path="/parish/notifications" element={<ProtectedRoute requiredRole="parish"><ParishNotificationsPage /></ProtectedRoute>} />
                 <Route path="/parroquia/ajustes" element={<ProtectedRoute requiredRole="parish"><ParroquiaAjustesPage /></ProtectedRoute>} />
                 <Route path="/datos-auxiliares" element={<ProtectedRoute requiredRole="parish"><DatosAuxiliaresPage /></ProtectedRoute>} />
+                <Route path="/parroquia/archivo" element={<ProtectedRoute requiredRole="parish"><PartidasSearchPage /></ProtectedRoute>} />
 
                 {/* --- BAPTISM ROUTES --- */}
                 <Route path="/parroquia/bautismo/nuevo" element={<ProtectedRoute requiredRole="parish"><BaptismNewPage /></ProtectedRoute>} />

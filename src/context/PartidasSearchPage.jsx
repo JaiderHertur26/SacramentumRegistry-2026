@@ -11,7 +11,6 @@ import {
     Baby, 
     Flame, 
     Heart, 
-    BookOpen, 
     Calendar,
     FileText,
     Loader2,
@@ -36,7 +35,7 @@ const PartidasSearchPage = () => {
 
     const loadData = () => {
         setLoading(true);
-        // Pequeño delay simulado para suavizar la transición de UI
+        // Simulamos una pequeña carga para UX
         setTimeout(() => {
             let results = [];
             const baptisms = (getBaptisms(user.parishId) || []).map(i => ({ ...i, type: 'bautismo' }));
@@ -179,9 +178,7 @@ const PartidasSearchPage = () => {
                                 <tr>
                                     <th className="px-6 py-4">Sacramento</th>
                                     <th className="px-6 py-4">Referencia</th>
-                                    <th className="px-6 py-4">
-                                        Titular / Esposos
-                                    </th>
+                                    <th className="px-6 py-4">Titular / Esposos</th>
                                     <th className="px-6 py-4">Fecha Celebración</th>
                                     <th className="px-6 py-4 text-right">Acciones</th>
                                 </tr>
@@ -190,80 +187,33 @@ const PartidasSearchPage = () => {
                                 {filteredItems.map((item) => (
                                     <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
                                         <td className="px-6 py-4">
-                                            {item.type === 'bautismo' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                                    <Baby className="w-3 h-3" /> Bautismo
-                                                </span>
-                                            )}
-                                            {item.type === 'confirmacion' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
-                                                    <Flame className="w-3 h-3" /> Confirmación
-                                                </span>
-                                            )}
-                                            {item.type === 'matrimonio' && (
-                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100">
-                                                    <Heart className="w-3 h-3" /> Matrimonio
-                                                </span>
-                                            )}
+                                            {item.type === 'bautismo' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Baby className="w-3 h-3" /> Bautismo</span>}
+                                            {item.type === 'confirmacion' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100"><Flame className="w-3 h-3" /> Confirmación</span>}
+                                            {item.type === 'matrimonio' && <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100"><Heart className="w-3 h-3" /> Matrimonio</span>}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div>
-                                                    <div className="font-mono text-xs text-gray-500">
-                                                        L:{item.book_number || item.libro} • F:{item.page_number || item.folio} • N:{item.entry_number || item.numero}
-                                                    </div>
-                                                    {item.status === 'anulada' && (
-                                                        <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded border border-red-200 font-bold">
-                                                            ANULADA
-                                                        </span>
-                                                    )}
-                                                </div>
+                                            <div className="font-mono text-xs text-gray-500">
+                                                L:{item.book_number || item.libro} • F:{item.page_number || item.folio} • N:{item.entry_number || item.numero}
                                             </div>
+                                            {item.status === 'anulada' && <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded border border-red-200 font-bold">ANULADA</span>}
                                         </td>
                                         <td className="px-6 py-4">
                                             {item.type === 'matrimonio' ? (
                                                 <div className="flex flex-col">
-                                                    <span className="font-bold text-gray-900">
-                                                        {item.esposo?.nombres || item.esposoNombre || item.husbandName || 'Esposo Desconocido'}
-                                                    </span>
-                                                    <span className="text-gray-500 text-xs flex items-center gap-1">
-                                                        & <Heart className="w-3 h-3 text-pink-400" />
-                                                        {item.esposa?.nombres || item.esposaNombre || item.wifeName || item.spouseName || 'Esposa Desconocida'}
-                                                    </span>
+                                                    <span className="font-bold text-gray-900">{item.esposo?.nombres || item.esposoNombre || 'Esposo'}</span>
+                                                    <span className="text-gray-500 text-xs">& {item.esposa?.nombres || item.esposaNombre || 'Esposa'}</span>
                                                 </div>
                                             ) : (
-                                                <div>
-                                                    <div className="font-bold text-gray-900">
-                                                        {item.nombres || item.firstName || item.nombre} {item.apellidos || item.lastName || item.apellido}
-                                                    </div>
-                                                </div>
+                                                <div className="font-bold text-gray-900">{item.nombres || item.firstName || item.nombre} {item.apellidos || item.lastName || item.apellido}</div>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-gray-600">
-                                            <div className="flex items-center gap-2">
-                                                <Calendar className="w-4 h-4 text-gray-400" />
-                                                {item.fechaCelebracion || item.sacramentDate || item.createdAt?.split('T')[0]}
-                                            </div>
+                                            <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-gray-400" />{item.fechaCelebracion || item.sacramentDate || item.createdAt?.split('T')[0]}</div>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button 
-                                                    size="sm" 
-                                                    variant="ghost" 
-                                                    className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                                    onClick={() => handleAction(item.id, item.type, 'view')}
-                                                    title="Ver Detalles"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </Button>
-                                                <Button 
-                                                    size="sm" 
-                                                    className="h-8 gap-2 bg-[#D4AF37] hover:bg-[#C4A027] text-[#111111] font-bold border border-[#B49017]"
-                                                    onClick={() => handleAction(item.id, item.type, 'print')}
-                                                >
-                                                    <Printer className="w-3.5 h-3.5" />
-                                                    <span className="hidden sm:inline">Imprimir</span>
-                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50" onClick={() => handleAction(item.id, item.type, 'view')}><Eye className="w-4 h-4" /></Button>
+                                                <Button size="sm" className="h-8 gap-2 bg-[#D4AF37] hover:bg-[#C4A027] text-[#111111] font-bold border border-[#B49017]" onClick={() => handleAction(item.id, item.type, 'print')}><Printer className="w-3.5 h-3.5" /><span className="hidden sm:inline">Imprimir</span></Button>
                                             </div>
                                         </td>
                                     </tr>
