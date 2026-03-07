@@ -29,40 +29,6 @@ const CiudadesList = () => {
 
     useEffect(() => {
         if (user) {
-            // --- DEBUGGING START ---
-            console.group("🔍 Debugging CiudadesList (Investigación de Carga)");
-            console.log("👤 Usuario Contexto:", { 
-                username: user.username, 
-                dioceseId: user.dioceseId, 
-                parishId: user.parishId 
-            });
-
-            // Escanear todas las claves de localStorage
-            const allKeys = Object.keys(localStorage);
-            const cityKeys = allKeys.filter(k => k.toLowerCase().includes('ciudad'));
-            
-            console.log(`🔑 Claves encontradas en localStorage (${cityKeys.length}):`, cityKeys);
-            
-            if (cityKeys.length === 0) {
-                console.warn("⚠️ ALERTA: No se encontraron claves de ciudades en localStorage.");
-            }
-
-            cityKeys.forEach(key => {
-                try {
-                    const raw = localStorage.getItem(key);
-                    const parsed = JSON.parse(raw);
-                    console.log(`📦 Contenido de [${key}]:`, {
-                        tipo: Array.isArray(parsed) ? 'Array' : typeof parsed,
-                        cantidad: Array.isArray(parsed) ? parsed.length : 'N/A',
-                        ejemplo: Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : 'Vacío'
-                    });
-                } catch (e) {
-                    console.error(`❌ Error leyendo clave [${key}]:`, e);
-                }
-            });
-            console.groupEnd();
-            // --- DEBUGGING END ---
-
             loadData();
         }
     }, [user]);
@@ -82,17 +48,14 @@ const CiudadesList = () => {
                 try {
                     const parishData = JSON.parse(parishDataRaw);
                     if (Array.isArray(parishData) && parishData.length > 0) {
-                        console.warn(`⚠️ Cargando ciudades desde scope PARROQUIAL (${user.parishId}) porque el Diocesano está vacío.`);
                         data = parishData;
                         source = 'parish';
                     }
                 } catch(e) {
-                    console.error("Error parsing parish fallback data", e);
                 }
             }
         }
 
-        console.log(`📊 Ciudades cargadas en State: ${data.length} (Fuente: ${source})`);
         setItems(data);
     };
 
