@@ -14,7 +14,8 @@ import {
     BookOpen, 
     Calendar,
     FileText,
-    Loader2
+    Loader2,
+    Layers
 } from 'lucide-react';
 
 const PartidasSearchPage = () => {
@@ -22,7 +23,7 @@ const PartidasSearchPage = () => {
     const { getBaptisms, getConfirmations, getMatrimonios } = useAppData();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState('bautismo');
+    const [activeTab, setActiveTab] = useState('todos');
     const [searchTerm, setSearchTerm] = useState('');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -38,12 +39,18 @@ const PartidasSearchPage = () => {
         // Pequeño delay simulado para suavizar la transición de UI
         setTimeout(() => {
             let results = [];
-            if (activeTab === 'bautismo') {
-                results = getBaptisms(user.parishId) || [];
+            const baptisms = (getBaptisms(user.parishId) || []).map(i => ({ ...i, type: 'bautismo' }));
+            const confirmations = (getConfirmations(user.parishId) || []).map(i => ({ ...i, type: 'confirmacion' }));
+            const marriages = (getMatrimonios(user.parishId) || []).map(i => ({ ...i, type: 'matrimonio' }));
+
+            if (activeTab === 'todos') {
+                results = [...baptisms, ...confirmations, ...marriages];
+            } else if (activeTab === 'bautismo') {
+                results = baptisms;
             } else if (activeTab === 'confirmacion') {
-                results = getConfirmations(user.parishId) || [];
+                results = confirmations;
             } else if (activeTab === 'matrimonio') {
-                results = getMatrimonios(user.parishId) || [];
+                results = marriages;
             }
             
             // Ordenar por fecha de creación o celebración (más reciente primero)
@@ -71,7 +78,7 @@ const PartidasSearchPage = () => {
             if (book.includes(lowerTerm) || page.includes(lowerTerm) || entry.includes(lowerTerm)) return true;
 
             // Búsqueda por Nombres
-            if (activeTab === 'matrimonio') {
+            if (item.type === 'matrimonio') {
                 const husband = (item.esposo?.nombres || item.esposoNombre || item.husbandName || '').toLowerCase();
                 const wife = (item.esposa?.nombres || item.esposaNombre || item.wifeName || item.spouseName || '').toLowerCase();
                 return husband.includes(lowerTerm) || wife.includes(lowerTerm);
@@ -86,13 +93,14 @@ const PartidasSearchPage = () => {
 
     const filteredItems = getFilteredData();
 
-    const handleAction = (id, action) => {
+    const handleAction = (id, type, action) => {
         // Navegación a las vistas de detalle existentes
-        const routeBase = `/parroquia/${activeTab}`; // ej: /parroquia/bautismo
-        navigate(`${routeBase}/${id}`);
+        const routeBase = `/parroquia/${type}`; // ej: /parroquia/bautismo
+        navigate(`${routeBase}/${id}`, { state: { autoPrint: action === 'print' } });
     };
 
     const tabs = [
+        { id: 'todos', label: 'Todos', icon: Layers, color: 'text-gray-600', bg: 'bg-gray-100' },
         { id: 'bautismo', label: 'Bautismo', icon: Baby, color: 'text-blue-500', bg: 'bg-blue-50' },
         { id: 'confirmacion', label: 'Confirmación', icon: Flame, color: 'text-red-500', bg: 'bg-red-50' },
         { id: 'matrimonio', label: 'Matrimonio', icon: Heart, color: 'text-pink-500', bg: 'bg-pink-50' }
@@ -133,7 +141,7 @@ const PartidasSearchPage = () => {
                 </div>
                 <Input
                     type="text"
-                    placeholder={`Buscar en ${tabs.find(t => t.id === activeTab)?.label}... (Nombre, Apellido, Libro, Folio)`}
+                    placeholder={`Buscar en ${tabs.find(t => t.id === activeTab)?.label || 'Todos'}... (Nombre, Apellido, Libro, Folio)`}
                     className="pl-11 h-14 text-lg shadow-sm border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#4B7BA7]/20 transition-all"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -169,9 +177,10 @@ const PartidasSearchPage = () => {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-gray-50 text-gray-600 font-semibold uppercase text-xs tracking-wider">
                                 <tr>
+                                    <th className="px-6 py-4">Sacramento</th>
                                     <th className="px-6 py-4">Referencia</th>
                                     <th className="px-6 py-4">
-                                        {activeTab === 'matrimonio' ? 'Esposos' : 'Titular'}
+                                        Titular / Esposos
                                     </th>
                                     <th className="px-6 py-4">Fecha Celebración</th>
                                     <th className="px-6 py-4 text-right">Acciones</th>
@@ -181,10 +190,24 @@ const PartidasSearchPage = () => {
                                 {filteredItems.map((item) => (
                                     <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
                                         <td className="px-6 py-4">
+                                            {item.type === 'bautismo' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                    <Baby className="w-3 h-3" /> Bautismo
+                                                </span>
+                                            )}
+                                            {item.type === 'confirmacion' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+                                                    <Flame className="w-3 h-3" /> Confirmación
+                                                </span>
+                                            )}
+                                            {item.type === 'matrimonio' && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-pink-50 text-pink-700 border border-pink-100">
+                                                    <Heart className="w-3 h-3" /> Matrimonio
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${tabs.find(t => t.id === activeTab)?.bg}`}>
-                                                    <BookOpen className={`w-4 h-4 ${tabs.find(t => t.id === activeTab)?.color}`} />
-                                                </div>
                                                 <div>
                                                     <div className="font-mono text-xs text-gray-500">
                                                         L:{item.book_number || item.libro} • F:{item.page_number || item.folio} • N:{item.entry_number || item.numero}
@@ -198,7 +221,7 @@ const PartidasSearchPage = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            {activeTab === 'matrimonio' ? (
+                                            {item.type === 'matrimonio' ? (
                                                 <div className="flex flex-col">
                                                     <span className="font-bold text-gray-900">
                                                         {item.esposo?.nombres || item.esposoNombre || item.husbandName || 'Esposo Desconocido'}
@@ -228,7 +251,7 @@ const PartidasSearchPage = () => {
                                                     size="sm" 
                                                     variant="ghost" 
                                                     className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                                    onClick={() => handleAction(item.id, 'view')}
+                                                    onClick={() => handleAction(item.id, item.type, 'view')}
                                                     title="Ver Detalles"
                                                 >
                                                     <Eye className="w-4 h-4" />
@@ -236,7 +259,7 @@ const PartidasSearchPage = () => {
                                                 <Button 
                                                     size="sm" 
                                                     className="h-8 gap-2 bg-[#D4AF37] hover:bg-[#C4A027] text-[#111111] font-bold border border-[#B49017]"
-                                                    onClick={() => handleAction(item.id, 'print')}
+                                                    onClick={() => handleAction(item.id, item.type, 'print')}
                                                 >
                                                     <Printer className="w-3.5 h-3.5" />
                                                     <span className="hidden sm:inline">Imprimir</span>
