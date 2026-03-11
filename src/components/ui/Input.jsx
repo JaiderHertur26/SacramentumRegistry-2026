@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const Input = React.forwardRef(({ className, error, name, ...props }, ref) => {

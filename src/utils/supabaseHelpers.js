@@ -35,90 +35,26 @@ export const validateJSONStructure = (jsonData) => {
     return { isValid: true, data: jsonData.data };
 };
 
-/**
- * Normalizes a value, ensuring it is a string and providing a fallback.
- */
 export const normalizePaddedValue = (value, fallback = '1') => {
     const raw = String(value ?? '').trim();
     return raw === '' ? String(fallback) : raw;
 };
 
-/**
- * Parses a potentially padded string number into an integer.
- */
 export const parsePaddedNumber = (value, fallback = 1) => {
     const normalized = normalizePaddedValue(value, String(fallback));
     const num = parseInt(normalized, 10);
     return Number.isNaN(num) ? fallback : num;
 };
 
-/**
- * Formats a number as a string, preserving leading zeros based on a template.
- */
 export const formatNumberLike = (numberValue, templateValue, fallbackWidth = 1) => {
     const template = normalizePaddedValue(templateValue, '1');
-    // Extract digit length to determine padding
     const width = Math.max(fallbackWidth, template.replace(/\D/g, '').length || 1);
     return String(numberValue).padStart(width, '0');
 };
 
-/**
- * Increments a padded string value by a step, preserving formatting.
- */
 export const incrementPaddedValue = (value, step = 1) => {
-    const template = normalizePaddedValue(value, '1');
-    const current = parsePaddedNumber(template, 0);
-    return formatNumberLike(current + step, template);
-};
-
-/**
- * Calculates the next sequence of Book, Folio, and Entry numbers.
- * Preserves padding from the template strings.
- *
- * Logic:
- * - Increments Entry number.
- * - If Entry reaches Folio capacity, increments Folio.
- * - If 'reiniciarPorFolio' is true, Entry resets to 1 on new Folio.
- */
-export const calculateNextSeatingNumbers = ({
-    book,
-    folio,
-    entry,
-    partidasPerFolio = 1,
-    reiniciarPorFolio = false
-}) => {
-    const tBook = normalizePaddedValue(book, '1');
-    const tFolio = normalizePaddedValue(folio, '1');
-    const tEntry = normalizePaddedValue(entry, '1');
-
-    let nBook = parsePaddedNumber(tBook, 1);
-    let nFolio = parsePaddedNumber(tFolio, 1);
-    let nEntry = parsePaddedNumber(tEntry, 1);
-    const capacity = Math.max(1, parsePaddedNumber(partidasPerFolio, 1));
-
-    let nextEntry = nEntry + 1;
-    let nextFolio = nFolio;
-    let nextBook = nBook;
-
-    // Determine if the entry we just used (nEntry) was the last one for the folio.
-    // Case 1: Entry restarts every folio (e.g. 1, 2, 1, 2)
-    // Case 2: Entry is a global sequence (e.g. 1, 2, 3, 4)
-    const isEndOfFolio = reiniciarPorFolio
-        ? (nEntry >= capacity)
-        : (nEntry % capacity === 0);
-
-    if (isEndOfFolio) {
-        nextFolio = nFolio + 1;
-        if (reiniciarPorFolio) {
-            nextEntry = 1;
-        }
-    }
-
-    return {
-        book: formatNumberLike(nextBook, tBook),
-        folio: formatNumberLike(nextFolio, tFolio),
-        entry: formatNumberLike(nextEntry, tEntry)
-    };
+    const current = parsePaddedNumber(value, 0);
+    return formatNumberLike(current + step, value);
 };
 
 /**

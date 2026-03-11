@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Church, Lock, User } from 'lucide-react';
+import { logAuthEvent } from '@/utils/authLogger';
 import { ROLE_TYPES } from '@/config/supabaseConfig';
 
 const LoginPage = () => {
@@ -22,7 +23,9 @@ const LoginPage = () => {
 
     const result = login(username, password);
     
-    if (result.success) {      
+    if (result.success) {
+      // Log successful navigation trigger as a confirmation
+      logAuthEvent(result.user, 'LOGIN_SUCCESS');
 
       toast({
         title: "Bienvenido",

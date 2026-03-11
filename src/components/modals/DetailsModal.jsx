@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -45,9 +44,17 @@ const DetailsModal = ({ isOpen, onClose, data }) => {
         </div>
 
         <div className="border-t border-gray-100 pt-4">
-           <div>
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Usuario Administrador</label>
-            <p className="text-gray-900 font-medium">{data.username || 'No asignado'}</p>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Código de Diócesis</label>
+              <p className="text-gray-900 font-mono font-bold bg-gray-50 px-2 py-1 rounded border border-gray-200 inline-block">
+                {data.codigo || data.code || 'No asignado'}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-1">Usuario Administrador</label>
+              <p className="text-gray-900 font-medium">{data.username || 'No asignado'}</p>
+            </div>
           </div>
         </div>
 

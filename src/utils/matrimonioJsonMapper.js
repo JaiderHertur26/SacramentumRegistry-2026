@@ -1,4 +1,3 @@
-
 import { generateUUID } from './supabaseHelpers';
 
 /**

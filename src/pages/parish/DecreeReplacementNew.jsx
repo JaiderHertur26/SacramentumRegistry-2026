@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -42,7 +41,10 @@ const DecreeReplacementNew = () => {
   const [bautismoNewPartida, setBautismoNewPartida] = useState({
       sacramentDate: '', firstName: '', lastName: '', birthDate: '', placeOfBirth: '',
       fatherName: '', motherName: '', tipoUnionPadres: '1', sex: '1',
-      godparents: '', minister: '', ministerFaith: ''
+      paternalGrandparents: '', maternalGrandparents: '',
+      godparents: '', minister: '', ministerFaith: '',
+      // Datos Registro Civil
+      serialRegCivil: '', nuipNuit: '', oficinaRegistro: '', fechaExpedicion: ''
   });
 
   // --- CONFIRMATION STATE ---
@@ -80,7 +82,6 @@ const DecreeReplacementNew = () => {
     }
   }, [user, getConceptosAnulacion, getParrocoActual]);
 
-  // --- SEARCH HANDLERS (Optional for Replacement - but good for autofill) ---
   const handleSearch = (type) => {
       let searchParams, setSearchError, setFound, setSearching, getMethod, mapNewPartida;
       
@@ -104,12 +105,18 @@ const DecreeReplacementNew = () => {
 
       setTimeout(() => {
           const allRecords = getMethod(user?.parishId);
-          const found = allRecords.find(r => String(r.book_number) === String(searchParams.book) && String(r.page_number) === String(searchParams.page) && String(r.entry_number) === String(searchParams.entry));
+          const getNum = (val) => val == null || val === '' ? null : parseInt(String(val).replace(/\D/g, ''), 10);
+          
+          const found = allRecords.find(r => 
+              getNum(r.book_number || r.libro) === getNum(searchParams.book) && 
+              getNum(r.page_number || r.folio) === getNum(searchParams.page) && 
+              getNum(r.entry_number || r.numero) === getNum(searchParams.entry)
+          );
 
           if (found) {
               setFound(found);
               mapNewPartida(found);
-              toast({ title: "Registro Encontrado", description: "Datos cargados en el formulario de nueva partida.", className: "bg-blue-50 text-blue-900" });
+              toast({ title: "Registro Encontrado", description: "Datos cargados en el formulario.", className: "bg-blue-50 text-blue-900" });
           } else {
               setSearchError("Partida no encontrada. Puede llenar los datos manualmente.");
           }
@@ -123,7 +130,6 @@ const DecreeReplacementNew = () => {
       const parishId = user.parishId;
 
       try {
-          // Common Logic
           let decreeData, newPartidaData, originalFound, collectionKey, paramsKey;
           
           if (type === 'bautismo') {
@@ -132,18 +138,6 @@ const DecreeReplacementNew = () => {
               originalFound = bautismoFound;
               collectionKey = `baptisms_${parishId}`;
               paramsKey = `baptismParameters_${parishId}`;
-          } else if (type === 'confirmacion') {
-              decreeData = confirmacionDecree;
-              newPartidaData = confirmacionNewPartida;
-              originalFound = confirmacionFound;
-              collectionKey = `confirmations_${parishId}`;
-              paramsKey = `confirmationParameters_${parishId}`;
-          } else {
-              decreeData = matrimonioDecree;
-              newPartidaData = matrimonioNewPartida;
-              originalFound = matrimonioFound;
-              collectionKey = `matrimonios_${parishId}`;
-              paramsKey = `matrimonioParameters_${parishId}`;
           }
 
           if (!decreeData.numeroDecreto || !decreeData.conceptoAnulacionId) throw new Error("Complete los datos del decreto.");
@@ -152,14 +146,14 @@ const DecreeReplacementNew = () => {
           let params = JSON.parse(localStorage.getItem(paramsKey) || '{}');
           if (!params.suplementarioLibro) params = { ...params, suplementarioLibro: 1, suplementarioFolio: 1, suplementarioNumero: 1 };
 
-          // 1. Mark Original as Replaced (if found)
+          // 1. Mark Original as Replaced
           if (originalFound) {
               const idx = allRecords.findIndex(r => r.id === originalFound.id);
               if (idx !== -1) {
                   allRecords[idx] = { 
                       ...allRecords[idx], 
                       isAnnulled: true, 
-                      status: 'anulada', // Replaced counts as annulled in broad terms or specific 'replaced' status
+                      status: 'anulada',
                       annulmentDecree: decreeData.numeroDecreto, 
                       annulmentDate: decreeData.fechaDecreto,
                       tipoNotaAlMargen: 'porReposicion.anulada',
@@ -170,14 +164,24 @@ const DecreeReplacementNew = () => {
 
           // 2. Create New Partida (Supletorio)
           const newId = generateUUID();
+          
+          // Mapeo especial para Bautismo (Registro Civil)
+          const extraData = type === 'bautismo' ? {
+              regciv: newPartidaData.serialRegCivil,
+              nuip: newPartidaData.nuipNuit,
+              notaria: newPartidaData.oficinaRegistro,
+              fecregis: newPartidaData.fechaExpedicion
+          } : {};
+
           const newRecord = {
               ...newPartidaData,
+              ...extraData,
               id: newId,
               parishId,
               book_number: params.suplementarioLibro,
               page_number: params.suplementarioFolio,
               entry_number: params.suplementarioNumero,
-              status: type === 'matrimonio' ? 'celebrated' : 'seated', // Matrimonio uses 'celebrated'
+              status: type === 'matrimonio' ? 'celebrated' : 'seated',
               isSupplementary: true,
               replacementDecreeRef: decreeData.numeroDecreto,
               conceptoAnulacionId: decreeData.conceptoAnulacionId,
@@ -195,10 +199,11 @@ const DecreeReplacementNew = () => {
               sacrament: type,
               conceptoAnulacionId: decreeData.conceptoAnulacionId,
               notes: decreeData.observations,
-              targetBaptismId: originalFound?.id || null, // Might be null if manual replacement
+              targetBaptismId: originalFound?.id || null, 
               newBaptismIdRepo: newId,
               originalPartidaSummary: originalFound ? { book: originalFound.book_number, page: originalFound.page_number, entry: originalFound.entry_number } : null,
               newPartidaSummary: { book: newRecord.book_number, page: newRecord.page_number, entry: newRecord.entry_number },
+              datosNuevaPartida: newRecord, // Guardamos copia completa
               createdBy: user.username
           };
 
@@ -229,7 +234,7 @@ const DecreeReplacementNew = () => {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Decreto de Reposición Registrado</h2>
                 <p className="text-gray-700 mb-8 font-medium">Se ha generado la nueva partida supletoria correctamente.</p>
                 <div className="flex justify-center gap-4">
-                    <Button onClick={() => navigate('/parish/decree-replacement/view')} variant="outline">Ver Lista</Button>
+                    <Button onClick={() => navigate('/parroquia/decretos/reposicion')} variant="outline">Ver Lista</Button>
                     <Button onClick={() => window.location.reload()} className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold">Nuevo Decreto</Button>
                 </div>
             </div>
@@ -276,13 +281,8 @@ const DecreeReplacementNew = () => {
           {found && (
               <div className="bg-gray-50 border border-gray-200 rounded-md p-4 mt-2 flex justify-between items-start">
                   <div className="text-sm">
-                      {type === 'matrimonio' ? (
-                          <><div><span className="font-bold">Esposos:</span> {found.husbandName} {found.husbandSurname} & {found.wifeName} {found.wifeSurname}</div>
-                          <div><span className="font-bold">Fecha:</span> {found.sacramentDate}</div></>
-                      ) : (
-                          <><div><span className="font-bold">Nombre:</span> {found.firstName} {found.lastName}</div>
-                          <div><span className="font-bold">Fecha:</span> {found.sacramentDate}</div></>
-                      )}
+                      <><div><span className="font-bold">Nombre:</span> {found.firstName} {found.lastName}</div>
+                      <div><span className="font-bold">Fecha:</span> {found.sacramentDate}</div></>
                   </div>
                   <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">Encontrada</div>
               </div>
@@ -311,8 +311,8 @@ const DecreeReplacementNew = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 p-1 rounded-lg">
                     <TabsTrigger value="bautismo" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">Bautizos</TabsTrigger>
-                    <TabsTrigger value="confirmacion" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm">Confirmaciones</TabsTrigger>
-                    <TabsTrigger value="matrimonio" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm">Matrimonios</TabsTrigger>
+                    <TabsTrigger value="confirmacion" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-red-600 data-[state=active]:shadow-sm" disabled>Confirmaciones</TabsTrigger>
+                    <TabsTrigger value="matrimonio" className="py-2 font-bold data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm" disabled>Matrimonios</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="bautismo">
@@ -323,74 +323,44 @@ const DecreeReplacementNew = () => {
                         
                         <div className="bg-green-50 p-6 rounded-lg border border-green-200 shadow-sm">
                             <h3 className="font-bold text-green-800 text-sm uppercase mb-4 border-b border-green-300 pb-2 flex items-center gap-2"><UserPlus className="w-4 h-4"/> 4. Datos de Nueva Partida (Supletorio)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Bautismo *</label><Input type="date" value={bautismoNewPartida.sacramentDate} onChange={e => setBautismoNewPartida({...bautismoNewPartida, sacramentDate: e.target.value})} className="bg-white" /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Bautismo *</label><Input type="date" value={bautismoNewPartida.sacramentDate} onChange={e => setBautismoNewPartida({...bautismoNewPartida, sacramentDate: e.target.value})} className="bg-white" required/></div>
                                 <div className="hidden md:block"></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Nombres *</label><Input value={bautismoNewPartida.firstName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, firstName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Apellidos *</label><Input value={bautismoNewPartida.lastName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, lastName: e.target.value})} className="bg-white" /></div>
+                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Nombres *</label><Input value={bautismoNewPartida.firstName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, firstName: e.target.value})} className="bg-white" required/></div>
+                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Apellidos *</label><Input value={bautismoNewPartida.lastName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, lastName: e.target.value})} className="bg-white" required/></div>
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Nacimiento</label><Input type="date" value={bautismoNewPartida.birthDate} onChange={e => setBautismoNewPartida({...bautismoNewPartida, birthDate: e.target.value})} className="bg-white" /></div>
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Lugar Nacimiento</label><Input value={bautismoNewPartida.placeOfBirth} onChange={e => setBautismoNewPartida({...bautismoNewPartida, placeOfBirth: e.target.value})} className="bg-white" /></div>
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Padre</label><Input value={bautismoNewPartida.fatherName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, fatherName: e.target.value})} className="bg-white" /></div>
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Madre</label><Input value={bautismoNewPartida.motherName} onChange={e => setBautismoNewPartida({...bautismoNewPartida, motherName: e.target.value})} className="bg-white" /></div>
+                                
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-700 uppercase">Tipo de Unión</label>
+                                    <select value={bautismoNewPartida.tipoUnionPadres} onChange={e => setBautismoNewPartida({...bautismoNewPartida, tipoUnionPadres: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white">
+                                        <option value="1">Matrimonio Católico</option><option value="2">Matrimonio Civil</option><option value="3">Unión Libre</option><option value="4">Madre Soltera</option><option value="5">Otro</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-gray-700 uppercase">Sexo</label>
+                                    <select value={bautismoNewPartida.sex} onChange={e => setBautismoNewPartida({...bautismoNewPartida, sex: e.target.value})} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white">
+                                        <option value="1">Masculino</option><option value="2">Femenino</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Abuelos Paternos</label><Input value={bautismoNewPartida.paternalGrandparents} onChange={e => setBautismoNewPartida({...bautismoNewPartida, paternalGrandparents: e.target.value})} className="bg-white" /></div>
+                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Abuelos Maternos</label><Input value={bautismoNewPartida.maternalGrandparents} onChange={e => setBautismoNewPartida({...bautismoNewPartida, maternalGrandparents: e.target.value})} className="bg-white" /></div>
                                 <div className="md:col-span-2 space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Padrinos</label><Input value={bautismoNewPartida.godparents} onChange={e => setBautismoNewPartida({...bautismoNewPartida, godparents: e.target.value})} className="bg-white" /></div>
+                                
+                                {/* NUEVOS DATOS: REGISTRO CIVIL */}
+                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-white rounded-lg border border-gray-200 mt-2">
+                                    <h4 className="md:col-span-4 text-xs font-bold text-blue-600 uppercase border-b pb-1">Datos Registro Civil</h4>
+                                    <div className="space-y-1"><label className="text-[10px] font-bold text-gray-500 uppercase">Serial Reg. Civil</label><Input value={bautismoNewPartida.serialRegCivil} onChange={e => setBautismoNewPartida({...bautismoNewPartida, serialRegCivil: e.target.value})} className="bg-gray-50" /></div>
+                                    <div className="space-y-1"><label className="text-[10px] font-bold text-gray-500 uppercase">NUIP / NUIT</label><Input value={bautismoNewPartida.nuipNuit} onChange={e => setBautismoNewPartida({...bautismoNewPartida, nuipNuit: e.target.value})} className="bg-gray-50" /></div>
+                                    <div className="space-y-1"><label className="text-[10px] font-bold text-gray-500 uppercase">Oficina Registro</label><Input value={bautismoNewPartida.oficinaRegistro} onChange={e => setBautismoNewPartida({...bautismoNewPartida, oficinaRegistro: e.target.value})} className="bg-gray-50" /></div>
+                                    <div className="space-y-1"><label className="text-[10px] font-bold text-gray-500 uppercase">Fecha Expedición</label><Input type="date" value={bautismoNewPartida.fechaExpedicion} onChange={e => setBautismoNewPartida({...bautismoNewPartida, fechaExpedicion: e.target.value})} className="bg-gray-50" /></div>
+                                </div>
+
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Ministro</label><Input value={bautismoNewPartida.minister} onChange={e => setBautismoNewPartida({...bautismoNewPartida, minister: e.target.value})} className="bg-white" /></div>
                                 <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Da Fe</label><Input value={bautismoNewPartida.ministerFaith} onChange={e => setBautismoNewPartida({...bautismoNewPartida, ministerFaith: e.target.value})} className="bg-white" /></div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-4 pt-4 mt-4 border-t border-gray-200">
-                             <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}><X className="w-4 h-4 mr-2" /> Cancelar</Button>
-                             <Button type="submit" disabled={isSubmitting} className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold"><Save className="w-4 h-4 mr-2" /> Guardar Decreto</Button>
-                        </div>
-                    </form>
-                </TabsContent>
-
-                <TabsContent value="confirmacion">
-                    <form onSubmit={(e) => handleSubmit(e, 'confirmacion')} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        {renderDecreeSection(confirmacionDecree, setConfirmacionDecree)}
-                        {renderSearchSection(confirmacionSearch, setConfirmacionSearch, handleSearch, confirmacionSearching, confirmacionSearchError, confirmacionFound, 'confirmacion')}
-                        {renderConceptSection(confirmacionDecree, setConfirmacionDecree)}
-                        
-                        <div className="bg-red-50 p-6 rounded-lg border border-red-200 shadow-sm">
-                            <h3 className="font-bold text-red-800 text-sm uppercase mb-4 border-b border-red-300 pb-2 flex items-center gap-2"><UserPlus className="w-4 h-4"/> 4. Datos de Nueva Partida (Supletorio)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Confirmación *</label><Input type="date" value={confirmacionNewPartida.sacramentDate} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, sacramentDate: e.target.value})} className="bg-white" /></div>
-                                <div className="hidden md:block"></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Nombres *</label><Input value={confirmacionNewPartida.firstName} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, firstName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Apellidos *</label><Input value={confirmacionNewPartida.lastName} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, lastName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Nacimiento</label><Input type="date" value={confirmacionNewPartida.birthDate} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, birthDate: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Lugar Nacimiento</label><Input value={confirmacionNewPartida.placeOfBirth} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, placeOfBirth: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Padre</label><Input value={confirmacionNewPartida.fatherName} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, fatherName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Madre</label><Input value={confirmacionNewPartida.motherName} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, motherName: e.target.value})} className="bg-white" /></div>
-                                <div className="md:col-span-2 space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Padrinos</label><Input value={confirmacionNewPartida.godparents} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, godparents: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Ministro</label><Input value={confirmacionNewPartida.minister} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, minister: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Da Fe</label><Input value={confirmacionNewPartida.ministerFaith} onChange={e => setConfirmacionNewPartida({...confirmacionNewPartida, ministerFaith: e.target.value})} className="bg-white" /></div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-4 pt-4 mt-4 border-t border-gray-200">
-                             <Button type="button" variant="outline" onClick={() => navigate(-1)} disabled={isSubmitting}><X className="w-4 h-4 mr-2" /> Cancelar</Button>
-                             <Button type="submit" disabled={isSubmitting} className="bg-[#D4AF37] hover:bg-[#C4A027] text-white font-bold"><Save className="w-4 h-4 mr-2" /> Guardar Decreto</Button>
-                        </div>
-                    </form>
-                </TabsContent>
-
-                <TabsContent value="matrimonio">
-                    <form onSubmit={(e) => handleSubmit(e, 'matrimonio')} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        {renderDecreeSection(matrimonioDecree, setMatrimonioDecree)}
-                        {renderSearchSection(matrimonioSearch, setMatrimonioSearch, handleSearch, matrimonioSearching, matrimonioSearchError, matrimonioFound, 'matrimonio')}
-                        {renderConceptSection(matrimonioDecree, setMatrimonioDecree)}
-                        
-                        <div className="bg-purple-50 p-6 rounded-lg border border-purple-200 shadow-sm">
-                            <h3 className="font-bold text-purple-800 text-sm uppercase mb-4 border-b border-purple-300 pb-2 flex items-center gap-2"><Heart className="w-4 h-4"/> 4. Datos de Nueva Partida (Supletorio)</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Fecha Matrimonio *</label><Input type="date" value={matrimonioNewPartida.sacramentDate} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, sacramentDate: e.target.value})} className="bg-white" /></div>
-                                <div className="hidden md:block"></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Esposo Nombres</label><Input value={matrimonioNewPartida.husbandName} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, husbandName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Esposo Apellidos</label><Input value={matrimonioNewPartida.husbandSurname} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, husbandSurname: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Esposa Nombres</label><Input value={matrimonioNewPartida.wifeName} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, wifeName: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Esposa Apellidos</label><Input value={matrimonioNewPartida.wifeSurname} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, wifeSurname: e.target.value})} className="bg-white" /></div>
-                                <div className="md:col-span-2 space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Testigos</label><Input value={matrimonioNewPartida.witnesses} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, witnesses: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Ministro</label><Input value={matrimonioNewPartida.minister} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, minister: e.target.value})} className="bg-white" /></div>
-                                <div className="space-y-1"><label className="text-xs font-bold text-gray-700 uppercase">Da Fe</label><Input value={matrimonioNewPartida.ministerFaith} onChange={e => setMatrimonioNewPartida({...matrimonioNewPartida, ministerFaith: e.target.value})} className="bg-white" /></div>
                             </div>
                         </div>
                         <div className="flex justify-end gap-4 pt-4 mt-4 border-t border-gray-200">

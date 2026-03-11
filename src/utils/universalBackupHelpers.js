@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for Universal Backup System
  * Handles validation, checksums, and formatting

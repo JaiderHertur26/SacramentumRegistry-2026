@@ -25,9 +25,13 @@ const ParishNotificationsPage = () => {
         if (user?.parishId) {
             setIsLoading(true);
             const parishNotifs = getParishNotifications(user.parishId);
-            // Filter out matrimonial notifications as they have their own page (NotificationWarningPage)
-            const officialNotifs = parishNotifs.filter(n => n.type !== 'matrimonial_notification');
-            setNotifications(officialNotifs);
+            // Sort notifications: unread first, then by most recent date
+            const sortedNotifs = [...parishNotifs].sort((a, b) => {
+                if (a.status === 'unread' && b.status !== 'unread') return -1;
+                if (a.status !== 'unread' && b.status === 'unread') return 1;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+            setNotifications(sortedNotifs);
             setIsLoading(false);
         }
     }, [user, getParishNotifications]);
@@ -37,27 +41,25 @@ const ParishNotificationsPage = () => {
         setNotifications(prev => prev.filter(n => n.id !== notificationId));
     };
 
-    const handleMarkAsRead = (notificationId) => {
-        updateNotificationStatus(notificationId, 'read');
-        setNotifications(prev => 
-            prev.map(n => n.id === notificationId ? { ...n, status: 'read' } : n)
-        );
-    };
-
     const handleViewDecree = (notification) => {
-        // Auto-delete the notification when viewed
-        deleteNotification(notification.id, user.parishId);
+        // Change handleViewDecree to mark notification as read instead of deleting
+        if (notification.status === 'unread') {
+            updateNotificationStatus(notification.id, 'read');
+            setNotifications(prev => 
+                prev.map(n => n.id === notification.id ? { ...n, status: 'read' } : n)
+            );
+        }
         
-        // Navigate to the content
+        // Update navigation routes to Spanish
         if (notification.decree_type === 'correction') {
-            navigate(`/parish/decree-correction/view?highlight=${notification.decree_id}`);
+            navigate(`/parroquia/decretos-correccion/ver?highlight=${notification.decree_id}`);
         } else if (notification.decree_type === 'replacement') {
-            navigate(`/parish/decree-replacement/view?highlight=${notification.decree_id}`);
+            navigate(`/parroquia/decretos-reposicion/ver?highlight=${notification.decree_id}`);
         } else {
             toast({
-                title: "No se puede abrir",
-                description: "El tipo de decreto no es reconocido.",
-                variant: "destructive",
+                title: "Atención",
+                description: "El tipo de documento adjunto no es reconocido o es un aviso de texto plano.",
+                variant: "warning",
             });
         }
     };
@@ -75,9 +77,11 @@ const ParishNotificationsPage = () => {
         const isCorrection = notification.decree_type === 'correction';
         const isUnread = notification.status === 'unread';
         
+        // Update UI styling: unread notifications have colored badges (blue/purple), read notifications are grayed out
         const badgeClass = isCorrection
-            ? 'bg-orange-100 text-orange-800 border-orange-200'
-            : 'bg-sky-100 text-sky-800 border-sky-200';
+            ? `border ${isUnread ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`
+            : `border ${isUnread ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-gray-100 text-gray-600 border-gray-200'}`;
+            
         const Icon = isCorrection ? FileText : FileUp;
     
         return (
@@ -87,52 +91,56 @@ const ParishNotificationsPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -50 }}
                 transition={{ duration: 0.3 }}
-                className={`p-4 rounded-lg shadow-sm border flex items-start gap-4 transition-colors ${isUnread ? 'bg-white border-blue-200 ring-1 ring-blue-100' : 'bg-gray-50 border-gray-200'}`}
+                className={`p-5 rounded-xl shadow-sm border flex items-start gap-4 transition-all duration-200 ${
+                    isUnread 
+                    ? 'bg-white border-blue-200 ring-1 ring-blue-100/50 hover:shadow-md' 
+                    : 'bg-gray-50 border-gray-200 opacity-70 hover:opacity-100'
+                }`}
             >
-                <div className={`p-2 rounded-full mt-1 ${isCorrection ? 'bg-orange-50' : 'bg-sky-50'}`}>
-                    <Icon className={`w-5 h-5 ${isCorrection ? 'text-orange-500' : 'text-sky-500'}`} />
+                <div className={`p-3 rounded-full mt-1 ${isUnread ? (isCorrection ? 'bg-blue-50' : 'bg-purple-50') : 'bg-gray-200'}`}>
+                    <Icon className={`w-6 h-6 ${isUnread ? (isCorrection ? 'text-blue-500' : 'text-purple-500') : 'text-gray-500'}`} />
                 </div>
                 <div className="flex-grow">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start mb-1">
                         <div className="flex items-center gap-2">
-                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${badgeClass}`}>
-                                {isCorrection ? 'Corrección' : 'Reposición'}
+                            <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${badgeClass}`}>
+                                {isCorrection ? 'Decreto de Corrección' : 'Decreto de Reposición'}
                             </span>
                             {isUnread && (
-                                <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                <span className="bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full animate-pulse shadow-sm">
                                     NUEVO
                                 </span>
                             )}
                         </div>
-                        <span className="text-xs text-gray-500">{formatDateTime(notification.createdAt)}</span>
+                        <span className="text-[12px] text-gray-500 font-medium">{formatDateTime(notification.createdAt)}</span>
                     </div>
-                    <p className={`text-sm mt-2 mb-3 ${isUnread ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+                    <p className={`text-[15px] leading-relaxed mt-2 mb-4 ${isUnread ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
                         {notification.message}
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <Button
-                            variant="default"
+                            variant={isUnread ? "default" : "outline"}
                             size="sm"
-                            className="text-xs h-8 bg-[#4B7BA7] hover:bg-[#3A6286]"
+                            className={`text-sm h-9 px-4 rounded-lg font-medium transition-colors ${isUnread ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm' : 'text-gray-700 bg-white hover:bg-gray-50 border-gray-300'}`}
                             onClick={() => handleViewDecree(notification)}
                         >
-                            <Eye className="w-3.5 h-3.5 mr-1.5" />
-                            Ver Decreto
+                            <Eye className="w-4 h-4 mr-2" />
+                            {isUnread ? 'Revisar Decreto' : 'Ver nuevamente'}
                         </Button>
                         
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs h-8 text-gray-400 hover:text-red-500 hover:bg-red-50 ml-auto"
+                            className="text-sm h-9 px-3 text-gray-400 hover:text-red-600 hover:bg-red-50 ml-auto rounded-lg"
                             onClick={() => {
                                 handleDelete(notification.id);
                                 toast({
                                     title: "Notificación eliminada",
-                                    description: "La notificación ha sido eliminada de su lista.",
+                                    description: "La notificación ha sido removida de su bandeja.",
                                 });
                             }}
                         >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                         </Button>
                     </div>
                 </div>
@@ -141,29 +149,29 @@ const ParishNotificationsPage = () => {
     };
 
     return (
-        <DashboardLayout>
+        <DashboardLayout entityName={user?.parishName || "Parroquia"}>
             <Helmet>
-                <title>Notificaciones de Cancillería - Eclesia Digital</title>
+                <title>Notificaciones de Cancillería | Eclesia Digital</title>
                 <meta name="description" content="Vea las notificaciones importantes de la cancillería." />
             </Helmet>
 
             <div className="mb-8">
-                <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-50 rounded-full">
-                        <Bell className="w-6 h-6 text-[#4B7BA7]" />
+                <div className="flex items-center gap-4">
+                    <div className="p-3.5 bg-indigo-600 rounded-xl shadow-sm">
+                        <Bell className="w-7 h-7 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900 font-serif">Notificaciones de Cancillería</h1>
-                        <p className="text-gray-500 text-sm">Bandeja de entrada de decretos y comunicaciones oficiales.</p>
+                        <h1 className="text-3xl font-bold text-gray-900 font-serif tracking-tight">Notificaciones Oficiales</h1>
+                        <p className="text-gray-500 text-[15px] mt-1">Bandeja de entrada de decretos emitidos por Cancillería para su parroquia.</p>
                     </div>
                 </div>
             </div>
 
             <div className="max-w-4xl mx-auto min-h-[500px]">
                 {isLoading ? (
-                    <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700 mx-auto"></div>
-                        <p className="mt-2 text-sm text-gray-500">Cargando notificaciones...</p>
+                    <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto"></div>
+                        <p className="mt-4 text-[15px] font-medium text-gray-500">Sincronizando con Cancillería...</p>
                     </div>
                 ) : (
                     <AnimatePresence mode="popLayout">
@@ -177,14 +185,14 @@ const ParishNotificationsPage = () => {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="text-center py-16 px-6 bg-white rounded-lg border border-dashed border-gray-300"
+                                className="text-center py-24 px-8 bg-white rounded-2xl border-2 border-dashed border-gray-200 shadow-sm"
                             >
-                                <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                   <Bell className="w-8 h-8 text-gray-400" />
+                                <div className="mx-auto w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-5 border border-green-100">
+                                   <CheckCheck className="w-10 h-10 text-green-500" />
                                 </div>
-                                <h3 className="text-lg font-semibold text-gray-900">No tiene notificaciones</h3>
-                                <p className="mt-2 text-sm text-gray-500 max-w-sm mx-auto">
-                                    Cuando la cancillería emita un decreto o comunicación que requiera su atención, aparecerá en esta lista.
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">Su bandeja está al día</h3>
+                                <p className="text-[15px] text-gray-500 max-w-md mx-auto leading-relaxed">
+                                    Cuando la Cancillería emita un decreto de corrección o reposición que requiera asentar una nota en sus libros, aparecerá aquí.
                                 </p>
                             </motion.div>
                         )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -37,10 +36,39 @@ const DecreeCorrectionView = () => {
 
   const loadData = () => {
       const entityId = user.parishId || user.dioceseId;
-      const storageKey = `decrees_correction_${entityId}`;
-      const allDecrees = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      
+      // 1. LEER DE LAS CAJAS CORRECTAS (Donde realmente se guardan)
+      const baptisms = JSON.parse(localStorage.getItem(`baptismCorrections_${entityId}`) || '[]');
+      const confirmations = JSON.parse(localStorage.getItem(`confirmationCorrections_${entityId}`) || '[]');
+      const marriages = JSON.parse(localStorage.getItem(`marriageCorrections_${entityId}`) || '[]');
+
+      // 2. NORMALIZAR DATOS PARA QUE LA TABLA NO ESTÉ VACÍA NUNCA
+      const mapDecrees = (list, sacramentType) => list.map(d => {
+          const original = d.originalPartidaSummary || {};
+          const nueva = d.newPartidaSummary || {};
+          return {
+              ...d,
+              sacrament: sacramentType,
+              numeroDecreto: d.numeroDecreto || d.decreeNumber || 'S/N',
+              fechaDecreto: d.fechaDecreto || d.decreeDate || '---',
+              apellidos: d.apellidos || (d.targetName ? d.targetName.split(' ').slice(1).join(' ') : '---'),
+              nombres: d.nombres || (d.targetName ? d.targetName.split(' ')[0] : 'Registro Histórico'),
+              errorEncontrado: d.observations || d.conceptoAnulacionId || 'Ver detalles de corrección',
+              correccionRealizada: `L:${nueva.libro || nueva.book || '?'} F:${nueva.folio || nueva.page || '?'} N:${nueva.numero || nueva.entry || '?'}`
+          };
+      });
+
+      const allDecrees = [
+          ...mapDecrees(baptisms, 'bautismo'),
+          ...mapDecrees(confirmations, 'confirmacion'),
+          ...mapDecrees(marriages, 'matrimonio')
+      ];
       
       const sacramentDecrees = allDecrees.filter(d => d.sacrament === activeTab);
+      
+      // Ordenar del más reciente al más antiguo
+      sacramentDecrees.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      
       setRecords(sacramentDecrees);
       setFilteredRecords(sacramentDecrees);
   };
@@ -48,9 +76,14 @@ const DecreeCorrectionView = () => {
   const handleDelete = (id) => {
       if (window.confirm("¿Está seguro de eliminar este decreto? Esta acción no se puede deshacer.")) {
           const entityId = user.parishId || user.dioceseId;
-          const storageKey = `decrees_correction_${entityId}`;
-          const allDecrees = JSON.parse(localStorage.getItem(storageKey) || '[]');
           
+          // Eliminar de la base de datos correspondiente según la pestaña
+          let storageKey = '';
+          if (activeTab === 'bautismo') storageKey = `baptismCorrections_${entityId}`;
+          else if (activeTab === 'confirmacion') storageKey = `confirmationCorrections_${entityId}`;
+          else if (activeTab === 'matrimonio') storageKey = `marriageCorrections_${entityId}`;
+
+          const allDecrees = JSON.parse(localStorage.getItem(storageKey) || '[]');
           const updated = allDecrees.filter(d => d.id !== id);
           localStorage.setItem(storageKey, JSON.stringify(updated));
           
@@ -64,8 +97,8 @@ const DecreeCorrectionView = () => {
     { header: 'Fecha', accessor: 'fechaDecreto', className: "w-32" },
     { header: 'Sujeto (Apellidos)', accessor: 'apellidos', className: "font-semibold" },
     { header: 'Sujeto (Nombres)', accessor: 'nombres' },
-    { header: 'Error', accessor: 'errorEncontrado', className: "truncate max-w-[200px]" },
-    { header: 'Corrección', accessor: 'correccionRealizada', className: "truncate max-w-[200px]" }
+    { header: 'Observaciones', accessor: 'errorEncontrado', className: "truncate max-w-[200px]" },
+    { header: 'Apunta A (Nueva)', accessor: 'correccionRealizada', className: "font-mono text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded" }
   ];
 
   return (
@@ -123,12 +156,6 @@ const DecreeTable = ({ data, columns, onDelete, navigate }) => (
             data={data}
             actions={[
                 { 
-                    label: <Edit className="w-4 h-4" />, 
-                    type: 'edit', 
-                    onClick: (row) => navigate(`/parroquia/decretos/editar-correccion-hoja?id=${row.id}&sacrament=${row.sacrament}`), 
-                    className: "text-[#4B7BA7] hover:bg-blue-50 p-2 rounded-full transition-colors"
-                },
-                { 
                     label: <Trash2 className="w-4 h-4" />, 
                     type: 'delete', 
                     onClick: (row) => onDelete(row.id), 
@@ -143,7 +170,7 @@ const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-16 text-gray-500">
          <FileX2 className="w-12 h-12 mb-3 text-gray-300" />
          <p className="font-medium">No se encontraron decretos</p>
-         <p className="text-sm">Intente con otro término o cree un nuevo registro.</p>
+         <p className="text-sm">Intente con otro término o importe nuevos registros.</p>
     </div>
 );
 

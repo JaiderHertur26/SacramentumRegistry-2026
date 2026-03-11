@@ -30,7 +30,8 @@ const ConfirmationSeatIndividualPage = () => {
         setLoading(true);
         const records = await getPendingConfirmations(user?.parishId);
         setPendingConfirmations(records);
-        setNextNumbers(getNextConfirmationNumbers());
+        // Task 2: Pass user?.parishId parameter to getNextConfirmationNumbers() call
+        setNextNumbers(getNextConfirmationNumbers(user?.parishId));
         setLoading(false);
     };
 
@@ -54,7 +55,8 @@ const ConfirmationSeatIndividualPage = () => {
             });
             const newRecords = await getPendingConfirmations(user?.parishId);
             setPendingConfirmations(newRecords);
-            setNextNumbers(getNextConfirmationNumbers());
+            // Task 2: Pass user?.parishId parameter to getNextConfirmationNumbers() call
+            setNextNumbers(getNextConfirmationNumbers(user?.parishId));
             
             if (currentIndex >= newRecords.length) {
                 setCurrentIndex(Math.max(0, newRecords.length - 1));
@@ -133,9 +135,9 @@ const ConfirmationSeatIndividualPage = () => {
                 <div className="col-span-full mb-2">
                     <h3 className="text-sm font-bold text-[#4B7BA7] uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Datos de Registro (Asignación Automática)</h3>
                     <div className="grid grid-cols-3 gap-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-                        <Field label="Libro" value={nextNumbers?.book} />
-                        <Field label="Folio" value={nextNumbers?.page} />
-                        <Field label="Número" value={nextNumbers?.entry} />
+                        <Field label="Libro" value={String(nextNumbers?.book || '1').padStart(4, '0')} />
+                        <Field label="Folio" value={String(nextNumbers?.page || '1').padStart(4, '0')} />
+                        <Field label="Número" value={String(nextNumbers?.entry || '1').padStart(4, '0')} />
                     </div>
                 </div>
 

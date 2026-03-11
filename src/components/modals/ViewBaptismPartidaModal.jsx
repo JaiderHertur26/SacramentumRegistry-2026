@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, BookOpen, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BaptismPrintTemplate from '@/components/BaptismPrintTemplate';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,28 +9,54 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
 
     if (!isOpen || !partida) return null;
 
+    // Extracción idéntica a la que hacemos en el Modal de BD_BautizosPage
+    let rawMarginText = partida.notaMarginal || partida.marginNote || partida.notaAlMargen || partida.observaciones || partida.observations || partida.notes || "";
+    
+    if (typeof rawMarginText === 'object') {
+        rawMarginText = rawMarginText.text || JSON.stringify(rawMarginText);
+    }
+
+    const isDecreto = partida.isSupplementary || partida.correctionDecreeRef || partida.type === 'replacement' || partida.createdByDecree === 'replacement' || partida.creadoPorDecreto;
+    const isAnulada = partida.status === 'anulada' || partida.isAnnulled || partida.estado === 'anulada';
+    
+    const hasMarginNote = rawMarginText !== "" || isAnulada || isDecreto; 
+
     const handlePrint = () => {
         const printContent = printComponentRef.current;
         if (!printContent) return;
 
-        const printWindow = window.open('', '', 'height=600,width=800');
-        if (!printWindow) return;
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
 
-        printWindow.document.write('<html><head><title>Imprimir Partida</title>');
-        // Copy styles
-        const styles = document.querySelectorAll('link[rel="stylesheet"], style');
-        styles.forEach(node => {
-            printWindow.document.head.appendChild(node.cloneNode(true));
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write('<html><head><title>Imprimir Partida</title>');
+        
+        const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        styles.forEach((style) => {
+            doc.write(style.outerHTML);
         });
-        printWindow.document.write('</head><body class="bg-white">');
-        printWindow.document.write(printContent.innerHTML);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        printWindow.focus();
+
+        doc.write('</head><body class="bg-white" style="margin: 0; padding: 0;">');
+        doc.write(printContent.innerHTML);
+        doc.write('</body></html>');
+        doc.close();
 
         setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 3000);
         }, 500);
     };
 
@@ -45,21 +71,56 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
                         transition={{ duration: 0.2 }}
                         className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
                     >
-                        {/* Header */}
                         <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50 rounded-t-lg shrink-0">
-                            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-800 flex items-center flex-wrap gap-2">
                                 <span className="bg-blue-100 text-blue-700 p-1.5 rounded-md text-xs">VISTA PREVIA</span>
                                 Partida de Bautismo
+                                
+                                {isDecreto && (
+                                     <span className="bg-blue-100 text-blue-800 p-1.5 rounded-md text-xs border border-blue-200 shadow-sm">
+                                         CREADA POR DECRETO
+                                     </span>
+                                )}
+                                
+                                {isAnulada && (
+                                     <span className="bg-red-100 text-red-800 p-1.5 rounded-md text-xs border border-red-200 shadow-sm flex items-center gap-1">
+                                         <AlertTriangle className="w-3 h-3"/> ANULADA (NO VÁLIDA)
+                                     </span>
+                                )}
                             </h2>
                             <Button variant="ghost" size="icon" onClick={onClose} className="rounded-full hover:bg-gray-200">
                                 <X className="w-5 h-5 text-gray-500" />
                             </Button>
                         </div>
 
-                        {/* Content - Scrollable Preview Area */}
-                        <div className="flex-1 overflow-auto bg-gray-100 p-8 flex justify-center">
-                            <div className="shadow-2xl bg-white print:shadow-none min-h-[11in] w-[8.5in]">
-                                <div ref={printComponentRef}>
+                        <div className="flex-1 overflow-auto bg-gray-100 p-8 flex flex-col items-center gap-6">
+                            
+                            {/* Banner Visual Externo Arreglado */}
+                            {hasMarginNote && (
+                                <div className={`w-[8.5in] border-l-4 ${isAnulada ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'} p-4 rounded-r-lg shadow-sm print:hidden mb-2 relative overflow-hidden`}>
+                                     <div className={`absolute top-0 right-0 -mr-6 -mt-6 opacity-10 pointer-events-none ${isAnulada ? 'text-red-900' : 'text-blue-900'}`}>
+                                         <BookOpen className="w-32 h-32" />
+                                     </div>
+                                     <h4 className={`text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2 ${isAnulada ? 'text-red-800' : 'text-blue-800'}`}>
+                                         <BookOpen className="w-4 h-4" /> Notas / Observaciones
+                                     </h4>
+                                     
+                                     <div className={`relative z-10 font-mono text-sm leading-relaxed whitespace-pre-wrap ${isAnulada ? 'text-red-900' : 'text-blue-900'}`}>
+                                         {rawMarginText || (isAnulada ? "PARTIDA ANULADA. VER DECRETO DE CORRECCIÓN." : "ESTA PARTIDA CONTIENE NOTAS O MODIFICACIONES.")}
+                                     </div>
+                                </div>
+                            )}
+
+                            <div className="shadow-2xl bg-white print:shadow-none min-h-[11in] w-[8.5in] relative">
+                                {isAnulada && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 overflow-hidden">
+                                        <div className="transform -rotate-45 text-[8rem] font-black text-red-600 opacity-20 border-8 border-red-600 p-8 rounded-3xl">
+                                            ANULADA
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div ref={printComponentRef} className="relative z-10">
                                     <BaptismPrintTemplate 
                                         data={partida} 
                                         parrocoNombre={auxiliaryData?.parroco || 'PÁRROCO ENCARGADO'} 
@@ -70,7 +131,6 @@ const ViewBaptismPartidaModal = ({ isOpen, onClose, partida, auxiliaryData }) =>
                             </div>
                         </div>
 
-                        {/* Footer - Actions */}
                         <div className="p-4 border-t border-gray-100 bg-white rounded-b-lg flex justify-end gap-3 shrink-0">
                             <Button variant="outline" onClick={onClose} className="border-gray-300">
                                 Cerrar

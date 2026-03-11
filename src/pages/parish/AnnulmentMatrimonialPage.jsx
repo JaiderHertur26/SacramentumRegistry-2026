@@ -1,4 +1,3 @@
-
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Heart } from 'lucide-react';

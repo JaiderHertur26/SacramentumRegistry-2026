@@ -32,11 +32,36 @@ const EditMisDatosModal = ({ isOpen, onClose, data }) => {
             return;
         }
 
+        // If it's a manual record, update it in localStorage instead of context
+        if (formData.isManual) {
+            try {
+                const LOCAL_STORAGE_KEY = 'misDatos_manual_records';
+                const savedManualData = localStorage.getItem(LOCAL_STORAGE_KEY);
+                let manualData = savedManualData ? JSON.parse(savedManualData) : [];
+                
+                const index = manualData.findIndex(item => item.id === formData.id);
+                if (index >= 0) {
+                    manualData[index] = formData;
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(manualData));
+                    toast({ title: 'Guardado', description: 'Registro manual actualizado correctamente.', className: "bg-green-50 text-green-700" });
+                    
+                    // Force a reload by triggering onClose which usually triggers a state update in parent
+                    onClose();
+                    // Optional: we can force reload by dispatching event, but parent relies on modal close state
+                    window.location.reload(); // Simple sync fix for manual edit
+                }
+            } catch (error) {
+                toast({ title: 'Error', description: 'No se pudo guardar el registro manual.', variant: 'destructive' });
+            }
+            return;
+        }
+
         const result = updateMisDatos(formData.id, formData, user?.parishId);
         
         if (result.success) {
-            toast({ title: 'Guardado', description: 'Registro actualizado correctamente.', variant: 'success' });
+            toast({ title: 'Guardado', description: 'Registro actualizado correctamente.', className: "bg-green-50 text-green-700" });
             onClose();
+            window.location.reload(); // Quick sync for context changes
         } else {
             toast({ title: 'Error', description: result.message, variant: 'destructive' });
         }
@@ -47,79 +72,79 @@ const EditMisDatosModal = ({ isOpen, onClose, data }) => {
             <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Código (IDCOD)</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Código (IDCOD)</label>
                         <Input name="idcod" value={formData.idcod || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Nombre *</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
                         <Input name="nombre" value={formData.nombre || ''} onChange={handleChange} className="border-l-4 border-l-blue-500" />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">NIT / Cédula</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">NIT / Cédula</label>
                         <Input name="nronit" value={formData.nronit || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Región</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Región</label>
                         <Input name="region" value={formData.region || ''} onChange={handleChange} />
                     </div>
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Dirección</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Dirección</label>
                         <Input name="direccion" value={formData.direccion || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Ciudad</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Ciudad</label>
                         <Input name="ciudad" value={formData.ciudad || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Teléfono</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Teléfono</label>
                         <Input name="telefono" value={formData.telefono || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Fax</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Fax</label>
                         <Input name="nrofax" value={formData.nrofax || ''} onChange={handleChange} />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-[#111111] mb-1">Email</label>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
                         <Input name="email" value={formData.email || ''} onChange={handleChange} />
                     </div>
                 </div>
 
                 <div className="border-t border-gray-200 pt-4 mt-2">
-                    <h4 className="font-bold text-[#D4AF37] mb-3 text-sm uppercase tracking-wider">Datos Eclesiásticos</h4>
+                    <h4 className="font-bold text-[#4B7BA7] mb-3 text-sm uppercase tracking-wider">Datos Eclesiásticos</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-bold text-[#111111] mb-1">Vicaría</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Vicaría</label>
                             <Input name="vicaria" value={formData.vicaria || ''} onChange={handleChange} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-[#111111] mb-1">Decanato</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Decanato</label>
                             <Input name="decanato" value={formData.decanato || ''} onChange={handleChange} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-[#111111] mb-1">Diócesis</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Diócesis</label>
                             <Input name="diocesis" value={formData.diocesis || ''} onChange={handleChange} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-[#111111] mb-1">Obispo</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Obispo</label>
                             <Input name="obispo" value={formData.obispo || ''} onChange={handleChange} />
                         </div>
                         <div>
-                            <label className="block text-sm font-bold text-[#111111] mb-1">Canciller</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Canciller</label>
                             <Input name="canciller" value={formData.canciller || ''} onChange={handleChange} />
                         </div>
                         <div>
-                             <label className="block text-sm font-bold text-[#111111] mb-1">Serial</label>
+                             <label className="block text-sm font-bold text-gray-700 mb-1">Serial</label>
                              <Input name="serial" value={formData.serial || ''} onChange={handleChange} />
                         </div>
                          <div className="md:col-span-2">
-                             <label className="block text-sm font-bold text-[#111111] mb-1">Ruta</label>
+                             <label className="block text-sm font-bold text-gray-700 mb-1">Ruta</label>
                              <Input name="ruta" value={formData.ruta || ''} onChange={handleChange} />
                         </div>
                     </div>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                    <Button variant="outline" onClick={onClose} className="text-[#111111] border-gray-300">
+                    <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700">
                         <X className="w-4 h-4 mr-2" /> Cancelar
                     </Button>
                     <Button onClick={handleSave} className="bg-[#4B7BA7] text-white hover:bg-[#3B6B97]">

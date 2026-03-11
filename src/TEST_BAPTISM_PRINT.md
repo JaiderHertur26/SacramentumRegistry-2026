@@ -1,4 +1,3 @@
-
 # Plan de Prueba de Integración: Normalización de Datos de Bautismo
 
 ## 1. Objetivo

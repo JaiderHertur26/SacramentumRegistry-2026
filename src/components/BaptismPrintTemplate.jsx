@@ -1,366 +1,292 @@
 import React, { forwardRef } from 'react';
-import { 
-    convertDateToSpanishText, 
-    convertNumberToSpanishWords,
-    convertMonthToSpanishWords,
-    convertYearToSpanishWords 
-} from '@/utils/dateTimeFormatters';
+import { convertDateToSpanishText } from '@/utils/dateTimeFormatters';
 import { useAppData } from '@/context/AppDataContext';
 import { useAuth } from '@/context/AuthContext';
-import { getActivePriest } from '@/utils/getActivePriest';
-import { dateToSpanishLegalText } from '@/utils/dateToSpanishLegalText.js';
+import { formatPersonData } from '@/utils/formatPersonData';
 
 const BaptismPrintTemplate = forwardRef((props, ref) => {
-  const { user } = useAuth();
-  const { 
-    getParrocos, 
-    generarNotaAlMargenAnulada, 
-    generarNotaAlMargenNuevaPartida, 
-    generarNotaAlMargenEstandar,
-    getBaptismCorrections,
-    getConceptosAnulacion,
-    obtenerNotasAlMargen
-  } = useAppData();
+    const { user } = useAuth();
+    const { getParrocos, obtenerNotasAlMargen } = useAppData() || {};
+    const dataSource = props.data || props || {};
 
-  const parrocos = user?.parishId ? getParrocos(user.parishId) : [];
-  const activePriestName = getActivePriest(parrocos);
-  const conceptos = user?.parishId ? getConceptosAnulacion(user.parishId) : [];
-  const notasAlMargenTemplates = obtenerNotasAlMargen(user?.parishId);
+    // --- 1. EXTRACTOR DE IDENTIDAD ---
+    const getSafeParishId = () => {
+        if (dataSource.parishId) return dataSource.parishId;
+        if (user?.parishId) return user.parishId;
+        try { return JSON.parse(localStorage.getItem('user') || '{}').parishId; } catch (e) { return null; }
+    };
+    const safeParishId = getSafeParishId();
 
-  // Defensive: Try to use props.data if it exists (normalized object), otherwise fallback to individual props
-  const dataSource = props.data || props;
-
-  const {
-    libro,
-    folio,
-    numero,
-    lugarBautismoDetalle,
-    fechaBautismo,
-    apellidos,
-    nombres,
-    fechaNacimiento,
-    lugarNacimientoDetalle,
-    sexo,
-    nombrePadre,
-    cedulaPadre,
-    nombreMadre,
-    cedulaMadre,
-    abuelosPaternos,
-    abuelosMaternos,
-    padrinos,
-    ministro,
-    notaAlMargen,
-    notaMarginalMatrimonio,
-    // Civil Registry Data
-    registrySerial,
-    registryDate,
-    // If the data object has enriched parroquiaInfo, use it. Otherwise fallback to props.
-    parroquiaInfo = {},
-    conceptoAnulacionId
-  } = dataSource;
-
-  const finalParrocoName = activePriestName;
-  
-  const finalParroquiaInfo = {
-      ...(props.parroquiaInfo || {}), // Props base
-      ...parroquiaInfo // Enriched data override
-  };
-
-  const {
-    nombre: nombreParroquia = '',
-    direccion: direccionParroquia = '',
-    telefono: telefonoParroquia = '',
-    email: emailParroquia = '',
-    ciudad: ciudadParroquia = '',
-    departamento: departamentoParroquia = '',
-    diocesis: diocesisFromParishInfo = ''
-  } = finalParroquiaInfo;
-
-  const ubicacion = [ciudadParroquia, departamentoParroquia].filter(Boolean).join(', ');
-
-  const getText = (v) => v || '---';
-  
-  const formatDate = (d) => {
-      try {
-          return convertDateToSpanishText(d);
-      } catch (e) {
-          console.error("Error formatting date for print:", d, e);
-          return d || '---';
-      }
-  };
-
-  // Logic to generate the dynamic marginal note text
-  const generateMarginalNote = () => {
-      let resultText = "";
-      const currentSpanishDate = dateToSpanishLegalText(new Date());
-
-      // 0. NEW: Check if there is a Matrimonial Notification Note
-      if (notaMarginalMatrimonio) {
-          return notaMarginalMatrimonio;
-      }
-
-      // 1. Check if this baptism is involved in a correction decree (either as original or new)
-      if (dataSource.id) {
-          const corrections = getBaptismCorrections(user?.parishId) || [];
-          
-          // Case A: This is the original annulled partida
-          const decreeAsOriginal = corrections.find(c => String(c.originalPartidaId) === String(dataSource.id));
-          if (decreeAsOriginal) {
-              const newPartidaSummary = decreeAsOriginal.newPartidaSummary || {};
-              const newPartidaData = {
-                  libro: newPartidaSummary.book || newPartidaSummary.book_number || '___',
-                  folio: newPartidaSummary.page || newPartidaSummary.page_number || '___',
-                  numero: newPartidaSummary.entry || newPartidaSummary.entry_number || '___'
-              };
-              const decreeData = {
-                  numero: decreeAsOriginal.decreeNumber,
-                  fecha: decreeAsOriginal.decreeDate
-              };
-              resultText = generarNotaAlMargenAnulada(newPartidaData, decreeData, user?.parishId);
-          }
-          // Case B: This is the new partida created by correction
-          else {
-            const decreeAsNew = corrections.find(c => String(c.newPartidaId) === String(dataSource.id));
-            if (decreeAsNew) {
-                const originalPartidaSummary = decreeAsNew.originalPartidaSummary || {};
-                const partidaAnulada = {
-                    libro: originalPartidaSummary.book || originalPartidaSummary.book_number || '___',
-                    folio: originalPartidaSummary.page || originalPartidaSummary.page_number || '___',
-                    numero: originalPartidaSummary.entry || originalPartidaSummary.entry_number || '___'
-                };
-                const decreeData = {
-                    numero: decreeAsNew.decreeNumber,
-                    fecha: decreeAsNew.decreeDate,
-                    oficina: 'Cancillería' // Can be enhanced if we store office in decree
-                };
-                
-                // We try to find the concept to see if it has specific office info, though not strictly required by prompt
-                const concept = conceptos.find(c => c.id === decreeAsNew.conceptoAnulacionId);
-                if (concept && concept.expide) {
-                    decreeData.oficina = concept.expide;
+    // --- 2. BUSCADOR UNIVERSAL Y RECURSIVO ---
+    const getOfficialData = (field, fallback) => {
+        try {
+            let misDatosRaw = safeParishId ? localStorage.getItem(`misDatos_${safeParishId}`) : null;
+            
+            if (!misDatosRaw || misDatosRaw === '[]' || misDatosRaw === '{}') {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('misDatos_')) {
+                        const val = localStorage.getItem(k);
+                        if (val && val !== '[]' && val !== '{}') {
+                            misDatosRaw = val;
+                            break;
+                        }
+                    }
                 }
-
-                resultText = generarNotaAlMargenNuevaPartida(partidaAnulada, decreeData, activePriestName, user?.parishId);
             }
-          }
-      }
 
-      // 2. Fallback: Manual Concept Selection (for preview before saving) or Legacy Data
-      if (!resultText && conceptoAnulacionId) {
-          const concept = conceptos.find(c => c.id === conceptoAnulacionId);
-          if (concept) {
-              const { notaAlMargenId } = concept;
-              
-              // If we are previewing and don't have decree data in 'corrections' yet, 
-              // we might have it in props or dataSource from the form state.
-              if (dataSource.previewDecreeData) {
-                   const { decreeData, relatedPartidaData, isAnnulled } = dataSource.previewDecreeData;
-                   if (isAnnulled) {
-                       resultText = generarNotaAlMargenAnulada(relatedPartidaData, decreeData, user?.parishId);
-                   } else {
-                       resultText = generarNotaAlMargenNuevaPartida(relatedPartidaData, decreeData, activePriestName, user?.parishId);
-                   }
-              }
+            if (misDatosRaw) {
+                const parsed = JSON.parse(misDatosRaw);
+                const findField = (data, targetField) => {
+                    if (!data) return null;
+                    if (Array.isArray(data)) {
+                        for (let item of data) {
+                            const found = findField(item, targetField);
+                            if (found) return found;
+                        }
+                        return null;
+                    }
+                    if (typeof data === 'object') {
+                        const f = targetField.toLowerCase();
+                        const val = data[f] || data[targetField] || data[targetField.toUpperCase()] || data[targetField.charAt(0).toUpperCase() + targetField.slice(1)];
+                        if (val && String(val).trim() !== '' && String(val).toUpperCase() !== 'DESCONOCIDA') {
+                            return String(val).trim();
+                        }
+                    }
+                    return null;
+                };
 
-              if (!resultText && notaAlMargenId === 'estandar') {
-                   resultText = generarNotaAlMargenEstandar(user?.parishId);
-              }
-          }
-      }
+                const result = findField(parsed, field);
+                if (result) return result;
+            }
+        } catch (e) {}
+        return fallback;
+    };
 
-      // 3. Fallback: Check status flags (Legacy compatibility)
-      if (!resultText && dataSource.status === 'anulada') {
-          // Minimal fallback if decree lookup failed but status is set
-          resultText = "PARTIDA ANULADA. (Consulte el archivo de decretos para más detalles).";
-      }
+    // --- 3. FUNCIONES DE FORMATEO Y LIMPIEZA ---
+    const formatDateText = (d) => {
+        try {
+            if (!d || d === '---' || d === '') return '---';
+            return convertDateToSpanishText(d).toUpperCase();
+        } catch (e) {
+            return d ? String(d).toUpperCase() : '---';
+        }
+    };
 
-      // 4. Standard Marginal Note or Default
-      if (!resultText) {
-          resultText = generarNotaAlMargenEstandar(user?.parishId);
-      }
-      
-      // 5. Hardcoded Default (Absolute fallback if even standard text is empty)
-      if (!resultText) {
-          const today = new Date();
-          const currentDay = today.getDate();
-          const currentMonth = today.getMonth() + 1; 
-          const currentYear = today.getFullYear();
+    const clean = (val) => {
+        if (!val) return '';
+        const s = String(val).toUpperCase().trim();
+        const placeholders = ['CIUDAD', 'DESCONOCIDA', 'UNDEFINED', 'NULL', 'N/A'];
+        return placeholders.includes(s) ? '' : s;
+    };
 
-          const dayText = convertNumberToSpanishWords(currentDay);
-          const monthText = convertMonthToSpanishWords(currentMonth);
-          const yearText = convertYearToSpanishWords(currentYear);
+    // --- 4. PROCESAMIENTO DE MEMBRETE Y PIE ---
+    const diocesis = getOfficialData('diocesis', user?.dioceseName || 'DIÓCESIS').toUpperCase();
+    const nombreParroquia = getOfficialData('nombre', user?.parishName || 'PARROQUIA').toUpperCase();
+    const ciudad = clean(getOfficialData('ciudad', ''));
+    const departamento = clean(getOfficialData('region', ''));
+    const direccion = clean(getOfficialData('direccion', ''));
+    const telefono = clean(getOfficialData('telefono', ''));
+    const email = (getOfficialData('email', '')).toLowerCase();
 
-          const locationText = ubicacion 
-            ? `${ciudadParroquia}, ${departamentoParroquia}`.toUpperCase()
-            : 'ESTA PARROQUIA';
+    const partesUbicacion = [ciudad, departamento].filter(Boolean);
+    const ubicacionHeader = partesUbicacion.length > 0 ? `${partesUbicacion.join(', ')} - COLOMBIA` : 'COLOMBIA';
 
-          let baseText = "";
+    const footerParts = [];
+    if (direccion) footerParts.push(direccion);
+    if (telefono) footerParts.push(`TEL: ${telefono}`);
+    if (ubicacionHeader) footerParts.push(ubicacionHeader);
+    const footerText = footerParts.join(' - ');
 
-          if (notaAlMargen && notaAlMargen.trim().length > 0) {
-              baseText = notaAlMargen.trim();
-              if (!baseText.endsWith('.')) baseText += ". ";
-              else baseText += " ";
-          } else if (registrySerial) {
-              const regDateFormatted = registryDate ? formatDate(registryDate) : '---';
-              baseText = `REGISTRO CIVIL SERIAL No. ${registrySerial}, EXPEDIDO POR REGISTRADURÍA NACIONAL DEL ESTADO CIVIL EN FECHA ${regDateFormatted}. `;
-          } else {
-              baseText = "SIN NOTA MARGINAL DE MATRIMONIO HASTA LA FECHA. ";
-          }
+    // --- 5. DATOS DEL SACRAMENTO ---
+    const libro = dataSource.numeroLibro || dataSource.libro || dataSource.book_number || '---';
+    const folio = dataSource.folio || dataSource.page_number || '---';
+    const numero = dataSource.numeroActa || dataSource.numero || dataSource.entry_number || '---';
 
-          baseText += `LA INFORMACIÓN SUMINISTRADA ES FIEL A LA CONTENIDA EN EL LIBRO. SE EXPIDE EN ${locationText} - COLOMBIA EL DÍA ${dayText} DE ${monthText} DE ${yearText}.`;
-          resultText = baseText;
-      }
+    let rawLugarBautismo = dataSource.lugarBautismo || dataSource.lugarBautismoDetalle || dataSource.lugbau || '';
+    if (!rawLugarBautismo || rawLugarBautismo === '---') rawLugarBautismo = nombreParroquia;
 
-      // FINAL: Replace dynamic placeholder with current date
-      if (resultText) {
-          return resultText.replace(/\[FECHA_EXPEDICION\]/g, currentSpanishDate);
-      }
+    const lugarBautismo = formatPersonData(rawLugarBautismo);
+    const fechaBautismo = dataSource.fechaSacramento || dataSource.fechaBautismo || dataSource.fecbau || '';
+    const apellidos = formatPersonData(dataSource.apellidos || dataSource.lastName || '');
+    const nombres = formatPersonData(dataSource.nombres || dataSource.firstName || '');
+    const fechaNacimiento = dataSource.fechaNacimiento || dataSource.birthDate || dataSource.fecnac || '';
+    const lugarNacimiento = formatPersonData(dataSource.lugarNacimiento || dataSource.lugarNacimientoDetalle || dataSource.lugnac || '');
 
-      return "";
-  };
+    let sexo = dataSource.sexo || dataSource.sex || '---';
+    const strSex = String(sexo).toUpperCase().trim();
+    if (strSex === '1' || strSex.includes('MASC') || strSex === 'M') sexo = 'MASCULINO';
+    else if (strSex === '2' || strSex.includes('FEM') || strSex === 'F') sexo = 'FEMENINO';
 
-  const padLabel = (label, width = 22) =>
-    label.padEnd(width, '.');
+    const padre = formatPersonData(dataSource.nombrePadre || dataSource.fatherName || dataSource.padre || '---');
+    const madre = formatPersonData(dataSource.nombreMadre || dataSource.motherName || dataSource.madre || '---');
 
-  const styles = {
-    page: {
-      width: '8.5in',
-      height: '11in',
-      padding: '0.5in',
-      fontFamily: '"Courier New", Courier, monospace',
-      fontSize: '12.5px',
-      lineHeight: '1.25',
-      color: '#000',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between'
-    },
-    header: {
-      textAlign: 'center',
-      fontWeight: 'bold',
-      fontSize: '14px'
-    },
-    title: {
-      textAlign: 'center',
-      fontWeight: 'bold',
-      fontSize: '16px',
-      marginTop: '8px'
-    },
-    center: { textAlign: 'center' },
-    left: { marginLeft: '0.6in' },
-    row: { whiteSpace: 'pre' },
+    const unionTypeMap = { '1': 'MATRIMONIO CATÓLICO', '2': 'MATRIMONIO CIVIL', '3': 'UNIÓN LIBRE', '4': 'MADRE SOLTERA', '5': 'OTRO' };
+    const rawUnion = String(dataSource.tipoUnionPadres || dataSource.parentsUnionType || dataSource.tipohijo || '---').trim();
+    const tipoUnion = formatPersonData(unionTypeMap[rawUnion] || rawUnion);
+
+    const abuelosPaternos = formatPersonData(dataSource.abuelosPaternos || dataSource.paternalGrandparents || dataSource.abuepat || '---');
+    const abuelosMaternos = formatPersonData(dataSource.abuelosMaternos || dataSource.maternalGrandparents || dataSource.abuemat || '---');
+    const padrinos = formatPersonData(dataSource.padrinos || dataSource.godparents || '---');
+
+    // Da Fe (Párroco Activo) y Traductor de Ministros
+    const parrocos = (safeParishId && typeof getParrocos === 'function') ? getParrocos(safeParishId) : [];
+    const parrocoActivo = parrocos.find(p => String(p.estado) === '1' || String(p.estado).toUpperCase() === 'ACTIVO');
+    const nombreParrocoActivo = parrocoActivo ? `${parrocoActivo.nombre || ''} ${parrocoActivo.apellido || ''}`.trim() : 'PÁRROCO ENCARGADO';
     
-    marginalNoteContainer: {
-        marginTop: '20px',
-        marginBottom: '20px',
-        paddingLeft: '0.4in',
-        paddingRight: '0.4in'
-    },
-    marginalNoteHeader: {
-        textAlign: 'center',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        marginBottom: '5px'
-    },
-    marginalNoteContent: {
-        textAlign: 'justify',
-        fontSize: '11px',
-        fontStyle: 'italic',
-    },
-    marginalNoteFooterLine: {
-        textAlign: 'center',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        marginTop: '5px'
-    },
+    const resolvePriestName = (val, isDaFe = false) => {
+        if (!val || val === '---') return null;
+        const str = String(val).trim();
+        const found = parrocos.find(p => String(p.id) === str || String(p.idcod) === str);
+        if (found) return `${found.nombre || found.nombres || ''} ${found.apellido || found.apellidos || ''}`.trim();
+        if (/^\d{1,5}$/.test(str) || (str.length === 36 && str.includes('-'))) {
+            return isDaFe ? nombreParrocoActivo : '---';
+        }
+        return str; 
+    };
 
-    signature: {
-      textAlign: 'center',
-      marginTop: '30px'
-    },
-    footer: {
-      textAlign: 'center',
-      fontSize: '11px',
-      marginTop: '6px'
+    const rawMinistro = dataSource.ministro || dataSource.minister || '---';
+    const rawDaFe = dataSource.daFe || dataSource.ministerFaith || dataSource.dafe || '---';
+
+    const ministroStr = resolvePriestName(rawMinistro, false) || '---';
+    let daFeStr = resolvePriestName(rawDaFe, true);
+    if (!daFeStr || daFeStr === '---') daFeStr = nombreParrocoActivo;
+
+    const ministro = formatPersonData(ministroStr);
+    const daFe = formatPersonData(daFeStr);
+
+    // --- 6. NOTA MARGINAL CON AÑO EN LETRAS ---
+    const getFechaHoyLetras = () => {
+        const date = new Date();
+        const dia = date.getDate();
+        const mes = date.getMonth() + 1;
+        const anio = date.getFullYear();
+
+        const dias = ['UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE', 'VEINTE', 'VEINTIUNO', 'VEINTIDÓS', 'VEINTITRÉS', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISÉIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE', 'TREINTA', 'TREINTA Y UN'];
+        const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+
+        const getAnioLetras = (year) => {
+            if (year === 2000) return 'DOS MIL';
+            const unidades = ['', 'UN', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
+            const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
+            const veintes = ['VEINTE', 'VEINTIÚN', 'VEINTIDÓS', 'VEINTITRÉS', 'VEINTICUATRO', 'VEINTICINCO', 'VEINTISÉIS', 'VEINTISIETE', 'VEINTIOCHO', 'VEINTINUEVE'];
+            const decenas = ['', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+            const centenas = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+
+            let res = '';
+            const miles = Math.floor(year / 1000);
+            if (miles === 1) res += 'MIL ';
+            else if (miles === 2) res += 'DOS MIL ';
+
+            const restMiles = year % 1000;
+            const cents = Math.floor(restMiles / 100);
+            if (cents > 0) res += centenas[cents] + ' ';
+
+            const decUnits = restMiles % 100;
+            if (decUnits > 0) {
+                if (decUnits < 10) res += unidades[decUnits];
+                else if (decUnits < 20) res += especiales[decUnits - 10];
+                else if (decUnits < 30) res += veintes[decUnits - 20];
+                else {
+                    const d = Math.floor(decUnits / 10);
+                    const u = decUnits % 10;
+                    res += decenas[d];
+                    if (u > 0) res += ' Y ' + unidades[u];
+                }
+            }
+            return res.trim();
+        };
+
+        return `${dias[dia - 1]} DE ${meses[mes - 1]} DEL AÑO ${getAnioLetras(anio)}`;
+    };
+
+    const notasConfig = typeof obtenerNotasAlMargen === 'function' ? obtenerNotasAlMargen(safeParishId) : null;
+    let rawMarginText = dataSource.notaMarginal || dataSource.marginNote || dataSource.notaAlMargen || dataSource.observaciones || "";
+
+    if (!rawMarginText) {
+        const isAnulada = dataSource.status === 'anulada' || dataSource.isAnnulled;
+        const isDecreto = dataSource.isSupplementary || dataSource.correctionDecreeRef;
+        rawMarginText = isAnulada ? notasConfig?.porCorreccion?.anulada : isDecreto ? notasConfig?.porCorreccion?.nuevaPartida : notasConfig?.estandar;
     }
-  };
+    const finalNote = (typeof rawMarginText === 'string' ? rawMarginText : "").replace(/\[FECHA_EXPEDICION\]/g, getFechaHoyLetras()).toUpperCase();
 
-  return (
-    <div ref={ref} style={styles.page}>
-      <style media="print">
-        {`
-          @page { size: letter; margin: 0; }
-          body { margin: 0; }
-        `}
-      </style>
+    // --- 7. ESTILOS Y ESTRUCTURA ---
+    const getText = (v) => (!v || v === '---') ? '---' : formatPersonData(v).toUpperCase();
 
-      {/* ENCABEZADO */}
-      <div style={styles.header}>
-        {diocesisFromParishInfo.toUpperCase()}<br />
-        {nombreParroquia.toUpperCase()}<br />
-        {ubicacion.toUpperCase()}
-      </div>
+    const styles = {
+        page: { width: '8.5in', minHeight: '11in', padding: '0.6in 0.8in', fontFamily: '"Courier New", Courier, monospace', fontSize: '13px', lineHeight: '1.2', color: '#000', display: 'flex', flexDirection: 'column', backgroundColor: 'white', boxSizing: 'border-box' },
+        header: { textAlign: 'center', fontWeight: 'bold', fontSize: '14px', marginBottom: '25px', lineHeight: '1.4' },
+        title: { textAlign: 'center', fontWeight: 'bold', fontSize: '16px', marginBottom: '10px', letterSpacing: '2px' },
+        bookSection: { display: 'flex', flexDirection: 'column', alignItems: 'center', fontWeight: 'bold', marginBottom: '25px', fontSize: '14px' },
+        bodySection: { paddingLeft: '0.2in', display: 'flex', flexDirection: 'column' },
+        signatureSection: { marginTop: '50px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', pageBreakInside: 'avoid' },
+        footer: { marginTop: 'auto', textAlign: 'center', fontSize: '10px', paddingTop: '15px', lineHeight: '1.4', borderTop: '1px solid #eee' }
+    };
 
-      {/* TÍTULO */}
-      <div style={styles.title}>PARTIDA DE BAUTISMO</div>
+    const Row = ({ label, value }) => (
+        <div style={{ display: 'flex', marginBottom: '7px' }}>
+            <span style={{ whiteSpace: 'pre' }}>{label.padEnd(18, '.')}: </span>
+            <span style={{ marginLeft: '4px' }}>{String(value || '').toUpperCase()}</span>
+        </div>
+    );
 
-      {/* REGISTRO */}
-      <div style={styles.center}>
-        <div style={styles.row}>{padLabel('LIBRO')} : {getText(libro)}</div>
-        <div style={styles.row}>{padLabel('FOLIO')} : {getText(folio)}</div>
-        <div style={styles.row}>{padLabel('NÚMERO')} : {getText(numero)}</div>
-      </div>
+    return (
+        <div ref={ref} style={styles.page}>
+            <style media="print">{`@page { size: letter; margin: 0; } body { margin: 0; background: white; -webkit-print-color-adjust: exact; }`}</style>
 
-      {/* DATOS */}
-      <div style={styles.left}>
-        <div style={styles.row}>{padLabel('LUGAR BAUTISMO')} : {getText(lugarBautismoDetalle)}</div>
-        <div style={styles.row}>{padLabel('FECHA BAUTISMO')} : {formatDate(fechaBautismo)}</div>
+            <div style={styles.header}>
+                <div>{diocesis}</div>
+                <div>{nombreParroquia}</div>
+                <div>{ubicacionHeader}</div>
+            </div>
 
-        <div style={styles.row}>{padLabel('APELLIDOS')} : {getText(apellidos)}</div>
-        <div style={styles.row}>{padLabel('NOMBRES')} : {getText(nombres)}</div>
-        <div style={styles.row}>{padLabel('FECHA NACIMIENTO')} : {formatDate(fechaNacimiento)}</div>
-        <div style={styles.row}>{padLabel('LUGAR NACIMIENTO')} : {getText(lugarNacimientoDetalle)}</div>
-        <div style={styles.row}>{padLabel('SEXO')} : {getText(sexo)}</div>
+            <div style={styles.title}>PARTIDA DE BAUTISMO</div>
 
-        <div style={styles.row}>{padLabel('NOMBRE PADRE')} : {getText(nombrePadre)}</div>
-        <div style={styles.row}>{padLabel('NOMBRE MADRE')} : {getText(nombreMadre)}</div>
+            <div style={styles.bookSection}>
+                <div style={{ textAlign: 'left', whiteSpace: 'pre' }}>
+                    <div>LIBRO.............: {String(libro).padStart(4, '0')}</div>
+                    <div>FOLIO.............: {String(folio).padStart(4, '0')}</div>
+                    <div>NUMERO............: {String(numero).padStart(4, '0')}</div>
+                </div>
+            </div>
 
-        <div style={styles.row}>{padLabel('ABUELOS PATERNOS')} : {getText(abuelosPaternos)}</div>
-        <div style={styles.row}>{padLabel('ABUELOS MATERNOS')} : {getText(abuelosMaternos)}</div>
-        <div style={styles.row}>{padLabel('PADRINOS')} : {getText(padrinos)}</div>
+            <div style={styles.bodySection}>
+                <Row label="LUGAR BAUTISMO" value={getText(lugarBautismo)} />
+                <Row label="FECHA BAUTISMO" value={formatDateText(fechaBautismo)} />
+                <Row label="APELLIDOS" value={getText(apellidos)} />
+                <Row label="NOMBRES" value={getText(nombres)} />
+                <Row label="FECHA NACIMIENTO" value={formatDateText(fechaNacimiento)} />
+                <Row label="LUGAR NACIMIENTO" value={getText(lugarNacimiento)} />
+                <Row label="SEXO" value={getText(sexo)} />
+                <Row label="NOMBRE PADRE" value={getText(padre)} />
+                <Row label="NOMBRE MADRE" value={getText(madre)} />
+                <Row label="TIPO DE UNION" value={getText(tipoUnion)} />
+                <Row label="ABUELOS PATERNOS" value={getText(abuelosPaternos)} />
+                <Row label="ABUELOS MATERNOS" value={getText(abuelosMaternos)} />
+                <Row label="PADRINOS" value={getText(padrinos)} />
+                <Row label="MINISTRO" value={getText(ministro)} />
+                <Row label="DA FE" value={getText(daFe)} />
+            </div>
 
-        <div style={styles.row}>{padLabel('MINISTRO')} : {getText(ministro)}</div>
-        <div style={styles.row}>{padLabel('DA FE')} : {finalParrocoName}</div>
-      </div>
+            {finalNote && (
+                <div style={{ marginTop: '25px' }}>
+                    <div style={{ textAlign: 'center', fontSize: '13px', marginBottom: '8px' }}>- - - - NOTA AL MARGEN - - - -</div>
+                    <div style={{ textAlign: 'justify', fontSize: '12px', lineHeight: '1.4', textTransform: 'uppercase' }}>{finalNote}</div>
+                </div>
+            )}
 
-      {/* NOTA MARGINAL */}
-      <div style={styles.marginalNoteContainer}>
-          <div style={styles.marginalNoteHeader}>
-            - - - - - - - - - - - - - - - - - NOTA AL MARGEN - - - - - - - - - - - - - - - - -
-          </div>
-          <div style={styles.marginalNoteContent}>
-              {generateMarginalNote()}
-          </div>
-          <div style={styles.marginalNoteFooterLine}>
-            - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-          </div>
-      </div>
+            <div style={styles.signatureSection}>
+                <p className="font-bold uppercase mb-1" style={{ fontSize: '11pt' }}>{daFe.toUpperCase()}</p>
+                <div style={{ borderTop: '1px solid black', width: '250px' }}></div>
+                <p className="font-bold uppercase mt-1" style={{ fontSize: '10pt' }}>PÁRROCO</p>
+            </div>
 
-      {/* FIRMA */}
-      <div style={styles.signature}>
-        {finalParrocoName}<br />
-        <strong>{props.cargo || 'PÁRROCO'}</strong>
-      </div>
-
-      {/* PIE */}
-      <div style={styles.footer}>
-        {direccionParroquia ? `${direccionParroquia} ` : ''}
-        {telefonoParroquia ? `· Tel. ${telefonoParroquia}` : ''}
-        <br />
-        {emailParroquia}
-      </div>
-    </div>
-  );
+            <div style={styles.footer}>
+                {footerText && <div>{footerText}</div>}
+                {email && <div>{email}</div>}
+            </div>
+        </div>
+    );
 });
 
 BaptismPrintTemplate.displayName = 'BaptismPrintTemplate';

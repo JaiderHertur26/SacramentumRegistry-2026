@@ -1,10 +1,11 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Database, FileText, Upload } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+
 import ConfirmationJsonImporter from '@/components/ConfirmationJsonImporter';
 import BaptismJsonImporter from '@/components/BaptismJsonImporter';
 import MatrimonioJsonImporter from '@/components/MatrimonioJsonImporter';
@@ -16,10 +17,15 @@ import ImportIglesiasForm from '@/components/modals/ImportIglesiasForm';
 import ImportObisposForm from '@/components/modals/ImportObisposForm';
 import ImportParrocosForm from '@/components/modals/ImportParrocosForm';
 import ImportCiudadesForm from '@/components/modals/ImportCiudadesForm';
-import ImportMisDatosForm from '@/components/modals/ImportMisDatosForm';
+
+// Utility functions
+import { parseMisDatosJSON, validateMisDatosFile } from '@/utils/misDatosImportValidator';
+import { saveMisDatosToLocalStorage } from '@/utils/misDatosStorageHelper';
 
 const ParroquiaAjustesPage = () => {
     const { user } = useAuth();
+    const { toast } = useToast();
+    const fileInputRef = useRef(null);
 
     // State for the first set of tabs (Catalogs)
     const [catalogImportTab, setCatalogImportTab] = useState('diocesis');
@@ -34,7 +40,63 @@ const ParroquiaAjustesPage = () => {
     const [isObisposImportOpen, setIsObisposImportOpen] = useState(false);
     const [isParrocosImportOpen, setIsParrocosImportOpen] = useState(false);
     const [isCiudadesImportOpen, setIsCiudadesImportOpen] = useState(false);
-    const [isMisDatosImportOpen, setIsMisDatosImportOpen] = useState(false);
+
+    const handleImportMisDatosClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleImportMisDatos = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const content = e.target.result;
+            const parsedData = parseMisDatosJSON(content);
+            const validation = validateMisDatosFile(parsedData);
+
+            if (!validation.isValid) {
+                toast({
+                    title: "Error de validación",
+                    description: validation.errors.join(" "),
+                    variant: "destructive"
+                });
+            } else {
+                const entityId = user?.parishId || user?.dioceseId || 'default';
+                try {
+                    saveMisDatosToLocalStorage(parsedData.data, entityId);
+                    toast({
+                        title: "¡Importación exitosa!",
+                        description: `Datos importados correctamente. Total: ${validation.recordCount} registros.`,
+                        className: "bg-green-50 text-green-700"
+                    });
+                } catch (err) {
+                    toast({
+                        title: "Error al guardar",
+                        description: err.message,
+                        variant: "destructive"
+                    });
+                }
+            }
+            
+            // Clear input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        };
+
+        reader.onerror = () => {
+            toast({
+                title: "Error de lectura",
+                description: "No se pudo leer el archivo seleccionado.",
+                variant: "destructive"
+            });
+        };
+
+        reader.readAsText(file);
+    };
 
     const ImportTabContent = ({ title, description, onClick, buttonText, children }) => (
         <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed border-gray-200 rounded-lg bg-gray-50/50 mt-4">
@@ -113,10 +175,21 @@ const ParroquiaAjustesPage = () => {
                         <TabsContent value="misdatos">
                             <ImportTabContent 
                                 title="Importar Mis Datos"
-                                description="Importe un archivo JSON con la lista de sus datos. Estructura requerida: idcod, nombre, nit, etc."
-                                onClick={() => setIsMisDatosImportOpen(true)}
-                                buttonText="Importar Mis Datos"
-                            />
+                                description="Importe un archivo JSON con la lista de sus datos. Estructura requerida: array 'data' con campo 'nombre' obligatorio."
+                                onClick={handleImportMisDatosClick}
+                                buttonText="Seleccionar Archivo JSON"
+                            >
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImportMisDatos}
+                                    accept=".json"
+                                    className="hidden"
+                                />
+                                <Button onClick={handleImportMisDatosClick} className="bg-[#4B7BA7] text-white hover:bg-[#3B6B97]">
+                                    <Upload className="w-4 h-4 mr-2" /> Seleccionar Archivo JSON
+                                </Button>
+                            </ImportTabContent>
                         </TabsContent>
                         <TabsContent value="ciudades">
                             <ImportTabContent 
@@ -141,7 +214,6 @@ const ParroquiaAjustesPage = () => {
                         </div>
                     </div>
                     
-                    {/* Updated Tabs for Sacraments - Difuntos removed */}
                     <Tabs value={sacramentImportTab} onValueChange={setSacramentImportTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-3 h-auto mb-6 bg-gray-100/80 p-1">
                             <TabsTrigger value="bautizos" className="data-[state=active]:text-blue-600 data-[state=active]:font-bold">Bautizos</TabsTrigger>
@@ -239,7 +311,6 @@ const ParroquiaAjustesPage = () => {
             <ImportObisposForm isOpen={isObisposImportOpen} onClose={() => setIsObisposImportOpen(false)} />
             <ImportParrocosForm isOpen={isParrocosImportOpen} onClose={() => setIsParrocosImportOpen(false)} />
             <ImportCiudadesForm isOpen={isCiudadesImportOpen} onClose={() => setIsCiudadesImportOpen(false)} />
-            <ImportMisDatosForm isOpen={isMisDatosImportOpen} onClose={() => setIsMisDatosImportOpen(false)} />
         </DashboardLayout>
     );
 };

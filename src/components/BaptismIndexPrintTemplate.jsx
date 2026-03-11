@@ -1,127 +1,117 @@
-
 import React, { forwardRef } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { formatPersonData } from '@/utils/formatPersonData';
 
-const BaptismIndexPrintTemplate = forwardRef((props, ref) => {
-  const { data = [], parishInfo = {}, filterBook = null } = props;
+const BaptismIndexPrintTemplate = forwardRef(({ data, parroquiaInfo, bookNumber }, ref) => {
+    const { user } = useAuth();
+    
+    // --- DATOS PARROQUIALES ---
+    const diocesis = (parroquiaInfo?.diocesis || user?.dioceseName || 'DIÓCESIS').toUpperCase();
+    const nombreParroquia = (parroquiaInfo?.nombre || user?.parishName || 'PARROQUIA').toUpperCase();
+    const ciudad = (parroquiaInfo?.ciudad || 'CIUDAD').toUpperCase();
+    const departamento = (parroquiaInfo?.departamento || '').toUpperCase();
+    const ubicacionHeader = [ciudad, departamento].filter(Boolean).join(', ') + ' - COLOMBIA';
 
-  const title = filterBook 
-    ? `ÍNDICE DE BAUTISMOS - LIBRO ${filterBook}`
-    : 'ÍNDICE GENERAL DE BAUTISMOS';
+    // --- ORDENAR DATOS ALFABÉTICAMENTE ---
+    // El índice debe ir ordenado por Apellidos para que sea fácil buscar en el libro físico
+    const sortedData = [...(data || [])].sort((a, b) => {
+        const nameA = `${a.apellidos || a.lastName || ''} ${a.nombres || a.firstName || ''}`.trim().toLowerCase();
+        const nameB = `${b.apellidos || b.lastName || ''} ${b.nombres || b.firstName || ''}`.trim().toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
 
-  const {
-    nombre = 'PARROQUIA',
-    ciudad = 'CIUDAD',
-    diocesis = 'DIÓCESIS'
-  } = parishInfo;
+    const formatNumber = (val) => {
+        if (!val || val === '---' || val === '0' || val === 0) return '-';
+        return String(val).trim().padStart(4, '0');
+    };
 
-  const styles = {
-    page: {
-      width: '100%',
-      fontFamily: '"Courier New", Courier, monospace',
-      fontSize: '11px',
-      color: '#000',
-    },
-    header: {
-      textAlign: 'center',
-      marginBottom: '20px',
-      borderBottom: '2px solid #000',
-      paddingBottom: '10px'
-    },
-    title: {
-      fontSize: '16px',
-      fontWeight: 'bold',
-      margin: '5px 0'
-    },
-    subtitle: {
-      fontSize: '12px',
-      fontWeight: 'normal'
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse',
-      marginTop: '10px'
-    },
-    th: {
-      borderBottom: '1px solid #000',
-      textAlign: 'left',
-      padding: '4px',
-      fontWeight: 'bold'
-    },
-    td: {
-      borderBottom: '1px solid #ddd',
-      padding: '4px',
-      verticalAlign: 'top'
-    },
-    footer: {
-      marginTop: '30px',
-      textAlign: 'center',
-      fontSize: '10px',
-      color: '#666'
-    }
-  };
+    // --- ESTILOS DE IMPRESIÓN ---
+    const styles = {
+        page: { 
+            width: '8.5in', 
+            padding: '0.5in 0.8in', 
+            fontFamily: 'Arial, sans-serif', 
+            color: '#000', 
+            backgroundColor: 'white',
+            boxSizing: 'border-box'
+        },
+        header: { textAlign: 'center', fontWeight: 'bold', fontSize: '13px', marginBottom: '20px', lineHeight: '1.4' },
+        title: { textAlign: 'center', fontWeight: 'bold', fontSize: '16px', marginBottom: '20px', letterSpacing: '1px' },
+        table: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
+        th: { border: '1px solid #000', padding: '6px', backgroundColor: '#f3f4f6', fontWeight: 'bold', textAlign: 'center', fontSize: '11px' },
+        td: { border: '1px solid #000', padding: '6px', fontSize: '11px', textTransform: 'uppercase' },
+        tdCenter: { border: '1px solid #000', padding: '6px', fontSize: '11px', textAlign: 'center', fontWeight: 'bold' }
+    };
 
-  return (
-    <div ref={ref} style={styles.page} className="print-container">
-      <style media="print">
-        {`
-          @page { size: letter; margin: 0.5in; }
-          body { margin: 0; }
-          .print-container { width: 100%; }
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          thead { display: table-header-group; }
-          tfoot { display: table-footer-group; }
-        `}
-      </style>
+    return (
+        <div ref={ref} style={styles.page}>
+            <style media="print">{`
+                @page { size: letter; margin: 0.5in; }
+                body { margin: 0; background: white; -webkit-print-color-adjust: exact; }
+                table { page-break-inside: auto; }
+                tr { page-break-inside: avoid; page-break-after: auto; }
+                thead { display: table-header-group; }
+                tfoot { display: table-footer-group; }
+            `}</style>
+            
+            <div style={styles.header}>
+                <div>{diocesis}</div>
+                <div>{nombreParroquia}</div>
+                <div>{ubicacionHeader}</div>
+            </div>
+            
+            <div style={styles.title}>
+                ÍNDICE DE BAUTISMOS {bookNumber ? `- LIBRO ${bookNumber}` : ''}
+            </div>
 
-      {/* HEADER SECTION - 4 Lines as requested */}
-      <div style={{...styles.header, borderBottom: 'none', paddingBottom: '0'}}>
-        <div style={{fontSize: '14px', fontWeight: 'bold'}}>{(diocesis || '').toUpperCase()}</div>
-        <div style={{fontSize: '14px', fontWeight: 'bold'}}>{(nombre || '').toUpperCase()}</div>
-        <div style={{fontSize: '14px', fontWeight: 'bold'}}>{(ciudad || '').toUpperCase()}</div>
-        <h2 style={{ ...styles.title, marginTop: '15px' }}>{title}</h2>
-        <div style={{ fontSize: '10px', marginTop: '5px' }}>
-            Generado el: {new Date().toLocaleDateString()}
+            <table style={styles.table}>
+                <thead>
+                    <tr>
+                        <th style={styles.th}>N°</th>
+                        <th style={styles.th}>APELLIDOS Y NOMBRES</th>
+                        <th style={styles.th}>PADRES</th>
+                        <th style={styles.th}>LIBRO</th>
+                        <th style={styles.th}>FOLIO</th>
+                        <th style={styles.th}>ACTA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sortedData.map((record, index) => {
+                        const apellidos = formatPersonData(record.apellidos || record.lastName || '');
+                        const nombres = formatPersonData(record.nombres || record.firstName || '');
+                        const padre = formatPersonData(record.nombrePadre || record.fatherName || record.padre || '---');
+                        const madre = formatPersonData(record.nombreMadre || record.motherName || record.madre || '---');
+                        
+                        // Ignorar registros anulados en el índice principal, o marcarlos
+                        const isAnulada = record.status === 'anulada' || record.isAnnulled || record.estado === 'anulada';
+
+                        return (
+                            <tr key={record.id || index} style={{ color: isAnulada ? '#666' : '#000', textDecoration: isAnulada ? 'line-through' : 'none' }}>
+                                <td style={styles.tdCenter}>{index + 1}</td>
+                                <td style={styles.td}>
+                                    <strong>{apellidos}</strong> {nombres}
+                                </td>
+                                <td style={styles.td}>
+                                    {padre} / {madre}
+                                </td>
+                                <td style={styles.tdCenter}>{formatNumber(record.libro || record.book_number || record.numeroLibro)}</td>
+                                <td style={styles.tdCenter}>{formatNumber(record.folio || record.page_number)}</td>
+                                <td style={styles.tdCenter}>{formatNumber(record.numero || record.entry_number || record.numeroActa)}</td>
+                            </tr>
+                        );
+                    })}
+                    
+                    {sortedData.length === 0 && (
+                        <tr>
+                            <td colSpan="6" style={{...styles.tdCenter, padding: '20px', color: '#666', textDecoration: 'none'}}>
+                                NO HAY REGISTROS PARA MOSTRAR EN ESTE ÍNDICE
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
         </div>
-      </div>
-
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={{ ...styles.th, width: '8%' }}>LIB</th>
-            <th style={{ ...styles.th, width: '8%' }}>FOL</th>
-            <th style={{ ...styles.th, width: '8%' }}>NUM</th>
-            <th style={{ ...styles.th, width: '30%' }}>APELLIDOS</th>
-            <th style={{ ...styles.th, width: '30%' }}>NOMBRES</th>
-            <th style={{ ...styles.th, width: '16%' }}>FECHA</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, index) => (
-            <tr key={index}>
-              <td style={styles.td}>{row.book_number || row.libro}</td>
-              <td style={styles.td}>{row.page_number || row.folio}</td>
-              <td style={styles.td}>{row.entry_number || row.numero}</td>
-              <td style={styles.td}>{row.lastName}</td>
-              <td style={styles.td}>{row.firstName}</td>
-              <td style={styles.td}>
-                {row.sacramentDate ? new Date(row.sacramentDate).toLocaleDateString() : '-'}
-              </td>
-            </tr>
-          ))}
-          {data.length === 0 && (
-              <tr>
-                  <td colSpan="6" style={{...styles.td, textAlign: 'center', padding: '20px'}}>No hay registros para mostrar.</td>
-              </tr>
-          )}
-        </tbody>
-      </table>
-
-      <div style={styles.footer}>
-        Documento generado por el sistema Eclesia Digital.
-      </div>
-    </div>
-  );
+    );
 });
 
 BaptismIndexPrintTemplate.displayName = 'BaptismIndexPrintTemplate';

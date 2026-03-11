@@ -1,7 +1,7 @@
 ## Pages
 - [Copias de Seguridad - Eclesia Digital](/backup): No description available
+- [Detalles de Partida de Bautismo](/baptismdetail): Detalles de partida de bautismo
 - [Login | Eclesia Digital](/login): Acceso al sistema de gestión
-- [Untitled Page](/baptismdetail): Details for baptism record
 - [Untitled Page](/baptismlist): View and manage all baptism records
 - [Untitled Page](/celebratedbaptismform): Register an already celebrated baptism
 - [Untitled Page](/createparishuser): Create a new parish user account

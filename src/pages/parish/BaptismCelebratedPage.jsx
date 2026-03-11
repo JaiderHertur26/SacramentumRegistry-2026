@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -36,47 +35,47 @@ const BaptismCelebratedPage = () => {
   const [ministersFaithFiltrados, setMinistersFaithFiltrados] = useState([]);
   const [searchMinisterFaith, setSearchMinisterFaith] = useState('');
 
-  // Initial Form Data
+  // Datos Iniciales del Formulario coincidiendo con Página de Edición y Mapeador
   const initialFormData = {
-    // Section 1: Numeración Manual
-    book_number: '',
-    page_number: '',
-    entry_number: '',
+    // Sección 1: Numeración Manual
+    numeroLibro: '', 
+    folio: '', 
+    numeroActa: '', 
 
-    // Section 2: Datos del Bautismo
-    sacramentDate: '',
-    place: '', // Will be set from Mis Datos
+    // Sección 2: Datos del Bautismo
+    fechaSacramento: '', 
+    lugarBautismoDetalle: '', 
     
-    // Section 3: Datos del Bautizado
-    lastName: '',
-    firstName: '',
-    sex: '',
-    birthDate: '',
-    birthPlace: '',
+    // Sección 3: Datos del Bautizado
+    apellidos: '', 
+    nombres: '', 
+    sexo: '', 
+    fechaNacimiento: '', 
+    lugarNacimientoDetalle: '', 
 
-    // Section 4: Datos de los Padres
-    parentsUnionType: '',
-    fatherName: '',
-    fatherId: '',
-    motherName: '',
-    motherId: '',
+    // Sección 4: Datos de los Padres
+    tipoUnionPadres: '', 
+    nombrePadre: '', 
+    cedulaPadre: '', 
+    nombreMadre: '', 
+    cedulaMadre: '', 
 
-    // Section 5: Abuelos
-    paternalGrandparents: '',
-    maternalGrandparents: '',
+    // Sección 5: Abuelos
+    abuelosPaternos: '', 
+    abuelosMaternos: '', 
 
-    // Section 6: Padrinos
-    godparents: '',
+    // Sección 6: Padrinos
+    padrinos: '', 
 
-    // Section 7: Ministro / Da Fe
-    minister: '',
-    ministerFaith: '', // Stores the active priest or manually selected one
-    observations: ''
+    // Sección 7: Ministro / Da Fe
+    ministro: '', 
+    daFe: '', 
+    observaciones: '' 
   };
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // Initialize catalogs
+  // Inicializar catálogos
   useEffect(() => {
       setCatalogs({
           ministers: ['Párroco', 'Vicario'], 
@@ -84,104 +83,82 @@ const BaptismCelebratedPage = () => {
       });
   }, []);
 
-  // Fetch Parish Name from "Mis Datos"
+  // --- SOLUCIÓN: BUSCADOR AGRESIVO DEL NOMBRE DE LA PARROQUIA ---
   useEffect(() => {
-      const loadParishData = async () => {
-          if (!user?.parishId) return;
+      if (!user?.parishId) return;
 
-          console.log("🔍 Iniciando búsqueda de datos de parroquia en localStorage...");
+      const loadParishName = () => {
+          let finalName = '';
 
-          const keysToCheck = [
-              `misDatos_${user.parishId}`,
-              `misDatos_${user.dioceseId}`,
-              `mis_datos_${user.parishId}`,
-              `mis_datos_${user.dioceseId}`,
-              `myData_${user.parishId}`,
-              `myData_${user.dioceseId}`,
-              `parishData_${user.parishId}`,
-              `parishData_${user.dioceseId}`,
-              `parish_${user.parishId}`,
-              `parish_${user.dioceseId}`,
-              'misDatos',
-              'mis_datos',
-              'myData',
-              'parishData'
-          ];
-          
-          let parishNameFound = null;
+          try {
+              // 1. Buscar exhaustivamente en "Mis Datos"
+              const misDatosRaw = localStorage.getItem(`misDatos_${user.parishId}`);
+              if (misDatosRaw) {
+                  const misDatos = JSON.parse(misDatosRaw);
+                  const registro = Array.isArray(misDatos) ? misDatos[0] : misDatos;
+                  
+                  if (registro) {
+                      finalName = registro.nombre || registro.NOMBRE || registro.Nombre || '';
+                  }
+              }
 
-          for (const key of keysToCheck) {
-              if (parishNameFound) break; // Stop if found
-              
-              try {
-                  const storedData = localStorage.getItem(key);
-                  if (storedData) {
-                      console.log(`📦 Datos encontrados en key: ${key}`);
-                      const parsedData = JSON.parse(storedData);
-                      
-                      // Check if it's an array and has items
-                      if (Array.isArray(parsedData) && parsedData.length > 0) {
-                          const record = parsedData[0];
-                          if (record.nombre) {
-                              parishNameFound = record.nombre;
-                              console.log(`✅ Nombre recuperado exitosamente: ${parishNameFound}`);
-                          }
-                      } 
-                      // Check if it's a single object
-                      else if (parsedData && typeof parsedData === 'object' && parsedData.nombre) {
-                          parishNameFound = parsedData.nombre;
-                          console.log(`✅ Nombre recuperado exitosamente (objeto): ${parishNameFound}`);
+              // 2. Si no lo encuentra, buscar en el Catálogo Global
+              if (!finalName) {
+                  const parishesRaw = localStorage.getItem('parishes');
+                  if (parishesRaw) {
+                      const parishes = JSON.parse(parishesRaw);
+                      const parishCat = parishes.find(p => p.id === user.parishId);
+                      if (parishCat) {
+                          finalName = parishCat.name || parishCat.nombre || '';
                       }
                   }
-              } catch (error) {
-                  console.warn(`⚠️ Error leyendo key ${key}:`, error);
               }
-          }
 
-          // Fallback to User Context if Mis Datos search failed
-          if (!parishNameFound) {
-              parishNameFound = user.parishName || user.parish_name || '';
-              console.log(`📋 Usando fallback del contexto de usuario: ${parishNameFound}`);
-          }
+              // 3. Último recurso: El nombre guardado en la sesión
+              if (!finalName) {
+                  finalName = user.parishName || '';
+              }
 
-          if (parishNameFound) {
-              setFormData(prev => ({ 
-                  ...prev, 
-                  place: parishNameFound
-              }));
-          } else {
-              console.error("❌ No se pudo encontrar el nombre de la parroquia en ninguna fuente.");
+              // Setearlo en el formulario siempre en mayúsculas
+              if (finalName) {
+                  setFormData(prev => ({ 
+                      ...prev, 
+                      lugarBautismoDetalle: finalName.toUpperCase() 
+                  }));
+              }
+          } catch (error) {
+              console.error("Error cargando nombre de parroquia:", error);
           }
       };
-      
-      loadParishData();
-  }, [user]);
 
-  // Load cities from localStorage
+      loadParishName();
+
+      // Escuchar cambios por si se actualiza "Mis Datos"
+      const handleStorageChange = (e) => {
+          if (e.key === `misDatos_${user.parishId}`) {
+              loadParishName();
+          }
+      };
+
+      window.addEventListener('storage', handleStorageChange);
+      return () => window.removeEventListener('storage', handleStorageChange);
+  }, [user?.parishId, user?.parishName]);
+
+  // Cargar ciudades desde localStorage
   useEffect(() => {
       if (user?.dioceseId) {
           const dioceseKey = `ciudades_${user.dioceseId}`;
-          console.log(`🔍 Buscando ciudades en: ${dioceseKey}`);
-          
           try {
               let parsed = JSON.parse(localStorage.getItem(dioceseKey) || '[]');
-              
-              // Fallback logic for Parish scope if Diocese scope is empty
               if (parsed.length === 0 && user.parishId) {
                   const parishKey = `ciudades_${user.parishId}`;
                   const parishData = JSON.parse(localStorage.getItem(parishKey) || '[]');
-                  if (parishData.length > 0) {
-                      parsed = parishData;
-                      console.log(`📦 Ciudades cargadas desde scope parroquial: ${parishKey}`);
-                  }
+                  if (parishData.length > 0) parsed = parishData;
               }
-
               if (Array.isArray(parsed) && parsed.length > 0) {
-                  console.log(`✅ Ciudades cargadas: ${parsed.length}`);
                   setCiudades(parsed);
                   setCiudadesFiltradas(parsed);
               } else {
-                  console.log(`ℹ️ No se encontraron ciudades.`);
                   setCiudades([]);
                   setCiudadesFiltradas([]);
               }
@@ -191,25 +168,20 @@ const BaptismCelebratedPage = () => {
       }
   }, [user?.dioceseId, user?.parishId]);
 
-  // Filter cities based on searchCity
+  // Filtrar ciudades basado en searchCity
   useEffect(() => {
       if (!searchCity) {
           setCiudadesFiltradas(ciudades);
       } else {
           const lower = searchCity.toLowerCase();
-          const filtered = ciudades.filter(c => 
-              c.nombre && String(c.nombre).toLowerCase().includes(lower)
-          );
+          const filtered = ciudades.filter(c => c.nombre && String(c.nombre).toLowerCase().includes(lower));
           setCiudadesFiltradas(filtered);
       }
   }, [searchCity, ciudades]);
 
-  // Load Ministers from localStorage
+  // Cargar Ministros desde localStorage
   useEffect(() => {
       if (!user?.parishId) return;
-
-      console.log("🔍 Buscando lista de ministros en localStorage...");
-      console.log(`📋 parishId: ${user.parishId}`);
 
       const keysToCheck = [
           `parroco_${user.parishId}`, `parroco_${user.dioceseId}`,
@@ -229,37 +201,26 @@ const BaptismCelebratedPage = () => {
               const storedData = localStorage.getItem(key);
               if (storedData) {
                   const parsed = JSON.parse(storedData);
-                  if (Array.isArray(parsed) && parsed.length > 0) {
-                      foundMinisters = parsed;
-                      console.log(`✅ Lista de ministros encontrada en: ${key}`);
-                  } else if (parsed && typeof parsed === 'object') {
-                      // Handle single object case by wrapping in array
-                      foundMinisters = [parsed];
-                      console.log(`✅ Ministro individual encontrado en: ${key}`);
-                  }
+                  if (Array.isArray(parsed) && parsed.length > 0) foundMinisters = parsed;
+                  else if (parsed && typeof parsed === 'object') foundMinisters = [parsed];
               }
-          } catch (e) {
-              console.warn(`⚠️ Error leyendo key ${key}`, e);
-          }
+          } catch (e) {}
       }
 
       if (foundMinisters.length > 0) {
           setMinistersList(foundMinisters);
           setMinistersFiltrados(foundMinisters);
-          setMinistersFaithFiltrados(foundMinisters); // Initialize faith filter too
-          console.log(`✅ Total ministros cargados: ${foundMinisters.length}`);
+          setMinistersFaithFiltrados(foundMinisters);
       } else {
-          console.log("❌ Error: No se encontraron listas de párrocos/ministros.");
           setMinistersList([]);
           setMinistersFiltrados([]);
           setMinistersFaithFiltrados([]);
       }
   }, [user?.parishId, user?.dioceseId]);
 
-  // Find Active Priest for "Da Fe" on Load
+  // Encontrar Párroco Activo para "Da Fe" al Cargar
   useEffect(() => {
     if (ministersList.length > 0) {
-        console.log("🔍 Buscando párroco activo para 'Da Fe'...");
         const activePriest = ministersList.find(m => {
             const status = String(m.estado || m.status || '').toLowerCase();
             return status === 'activo' || status === 'active' || status === '1' || m.active === true;
@@ -267,58 +228,46 @@ const BaptismCelebratedPage = () => {
 
         if (activePriest) {
             const name = `${activePriest.nombre || activePriest.name} ${activePriest.apellido || ''}`.trim();
-            console.log(`✅ Párroco activo encontrado: ${name}`);
-            setFormData(prev => ({ ...prev, ministerFaith: name }));
+            setFormData(prev => ({ ...prev, daFe: name }));
             setSearchMinisterFaith(name);
-        } else {
-            console.log("⚠️ No se encontró párroco con estado 'Activo'.");
         }
     }
   }, [ministersList]);
 
-  // Filter Ministers based on searchMinister (Sacerdote)
+  // Filtrar Ministros basado en searchMinister (Sacerdote)
   useEffect(() => {
-    if (!searchMinister) {
-        setMinistersFiltrados(ministersList);
-    } else {
+    if (!searchMinister) setMinistersFiltrados(ministersList);
+    else {
         const lowerTerm = searchMinister.toLowerCase();
-        const filtered = ministersList.filter(m => {
+        setMinistersFiltrados(ministersList.filter(m => {
             const fullName = `${m.nombre || m.name} ${m.apellido || ''}`.trim().toLowerCase();
             return fullName.includes(lowerTerm);
-        });
-        setMinistersFiltrados(filtered);
+        }));
     }
   }, [searchMinister, ministersList]);
 
-  // Filter Ministers based on searchMinisterFaith (Da Fe)
+  // Filtrar Ministros basado en searchMinisterFaith (Da Fe)
   useEffect(() => {
-    if (!searchMinisterFaith) {
-        setMinistersFaithFiltrados(ministersList);
-    } else {
+    if (!searchMinisterFaith) setMinistersFaithFiltrados(ministersList);
+    else {
         const lowerTerm = searchMinisterFaith.toLowerCase();
-        const filtered = ministersList.filter(m => {
+        setMinistersFaithFiltrados(ministersList.filter(m => {
             const fullName = `${m.nombre || m.name} ${m.apellido || ''}`.trim().toLowerCase();
             return fullName.includes(lowerTerm);
-        });
-        setMinistersFaithFiltrados(filtered);
+        }));
     }
   }, [searchMinisterFaith, ministersList]);
 
-  // Find Priest by Baptism Date and Auto-populate ONLY "Sacerdote"
+  // Encontrar Sacerdote por Fecha de Bautismo
   useEffect(() => {
-      if (!formData.sacramentDate || ministersList.length === 0) return;
+      if (!formData.fechaSacramento || ministersList.length === 0) return;
 
-      console.log("🔍 Buscando párroco según fecha del bautismo");
-      console.log(`📅 Fecha del bautismo: ${formData.sacramentDate}`);
-
-      const baptismDate = new Date(formData.sacramentDate);
-      baptismDate.setHours(0, 0, 0, 0); // Normalize time
+      const baptismDate = new Date(formData.fechaSacramento);
+      baptismDate.setHours(0, 0, 0, 0);
 
       const foundMinister = ministersList.find(m => {
-          // Normalize dates from various possible field names
           const startDateStr = m.fechaIngreso || m.fecha_ingreso || m.startDate || m.start_date || m.fechaNombramiento;
           const endDateStr = m.fechaSalida || m.fecha_salida || m.endDate || m.end_date;
-
           if (!startDateStr) return false;
 
           const startDate = new Date(startDateStr);
@@ -330,132 +279,70 @@ const BaptismCelebratedPage = () => {
               endDate.setHours(0, 0, 0, 0);
           }
 
-          // Logic: started BEFORE or ON baptism date AND (ended AFTER baptism date OR hasn't ended)
-          const isAfterStart = startDate <= baptismDate;
-          const isBeforeEnd = !endDate || endDate >= baptismDate;
-
-          return isAfterStart && isBeforeEnd;
+          return startDate <= baptismDate && (!endDate || endDate >= baptismDate);
       });
 
       if (foundMinister) {
           const name = `${foundMinister.nombre || foundMinister.name} ${foundMinister.apellido || ''}`.trim();
-          console.log(`✅ Párroco encontrado para fecha de bautismo: ${name}`);
-          
-          setFormData(prev => ({
-              ...prev,
-              minister: name
-              // Removed ministerFaith update here to keep it independent
-          }));
-          
-          setSearchMinister(name); // Sync search field for datalist
+          setFormData(prev => ({ ...prev, ministro: name }));
+          setSearchMinister(name);
       } else {
-          console.log("⚠️ No se encontró párroco para la fecha especificada.");
-          setFormData(prev => ({
-              ...prev,
-              minister: ''
-          }));
+          setFormData(prev => ({ ...prev, ministro: '' }));
           setSearchMinister('');
       }
-
-  }, [formData.sacramentDate, ministersList]);
-
+  }, [formData.fechaSacramento, ministersList]);
 
   const handleChange = (e) => {
       const { name, value, type, checked } = e.target;
-      setFormData(prev => ({
-          ...prev,
-          [name]: type === 'checkbox' ? checked : value
-      }));
+      setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleMinisterChange = (e) => {
       const { value } = e.target;
       setSearchMinister(value);
-      setFormData(prev => ({
-          ...prev,
-          minister: value
-      }));
+      setFormData(prev => ({ ...prev, ministro: value }));
   };
   
-  const handleMinisterBlur = () => {
-    // Optional: validation or auto-formatting on blur can go here
-  };
-
   const handleMinisterFaithChange = (e) => {
     const { value } = e.target;
     setSearchMinisterFaith(value);
-    setFormData(prev => ({
-        ...prev,
-        ministerFaith: value
-    }));
-  };
-
-  const handleMinisterFaithSelect = (e) => {
-     // Optional: logic when leaving the field
-     console.log("✅ Ministro Da Fe seleccionado:", formData.ministerFaith);
+    setFormData(prev => ({ ...prev, daFe: value }));
   };
 
   const handleCityChange = (e) => {
       const { value } = e.target;
       setSearchCity(value);
-      setFormData(prev => ({ ...prev, birthPlace: value }));
-  };
-
-  const handleCitySelect = (e) => {
-      const { value } = e.target;
-      if (value) {
-        setFormData(prev => ({ ...prev, birthPlace: value }));
-      }
+      setFormData(prev => ({ ...prev, lugarNacimientoDetalle: value }));
   };
 
   const validateForm = async () => {
       const requiredFields = [
-          { field: 'book_number', label: 'Libro' },
-          { field: 'page_number', label: 'Folio' },
-          { field: 'entry_number', label: 'Número' },
-          { field: 'firstName', label: 'Nombres del Bautizado' },
-          { field: 'lastName', label: 'Apellidos del Bautizado' },
-          { field: 'birthDate', label: 'Fecha de Nacimiento' },
-          { field: 'sacramentDate', label: 'Fecha de Bautismo' },
-          { field: 'place', label: 'Lugar del Bautismo' },
-          { field: 'minister', label: 'Ministro' }
+          { field: 'numeroLibro', label: 'Libro' },
+          { field: 'folio', label: 'Folio' },
+          { field: 'numeroActa', label: 'Número' },
+          { field: 'nombres', label: 'Nombres del Bautizado' },
+          { field: 'apellidos', label: 'Apellidos del Bautizado' },
+          { field: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+          { field: 'fechaSacramento', label: 'Fecha de Bautismo' },
+          { field: 'lugarBautismoDetalle', label: 'Lugar del Bautismo' },
+          { field: 'ministro', label: 'Ministro' }
       ];
 
       for (const req of requiredFields) {
           if (!formData[req.field]) {
-              toast({
-                  title: "Campo Requerido",
-                  description: `Por favor complete: ${req.label}`,
-                  variant: "destructive"
-              });
+              toast({ title: "Campo Requerido", description: `Por favor complete: ${req.label}`, variant: "destructive" });
               return false;
           }
       }
 
-      // Date Validation
-      if (new Date(formData.birthDate) > new Date(formData.sacramentDate)) {
-          toast({
-              title: "Fecha Inválida",
-              description: "La fecha de nacimiento no puede ser posterior a la fecha de bautismo.",
-              variant: "destructive"
-          });
+      if (new Date(formData.fechaNacimiento) > new Date(formData.fechaSacramento)) {
+          toast({ title: "Fecha Inválida", description: "La fecha de nacimiento no puede ser posterior a la fecha de bautismo.", variant: "destructive" });
           return false;
       }
 
-      // Duplicate Numbers Validation
-      const numberCheck = await validateBaptismNumbers(
-          formData.book_number, 
-          formData.page_number, 
-          formData.entry_number, 
-          user?.parishId
-      );
-
+      const numberCheck = await validateBaptismNumbers(formData.numeroLibro, formData.folio, formData.numeroActa, user?.parishId);
       if (!numberCheck.valid) {
-          toast({
-              title: "Error de Duplicidad",
-              description: numberCheck.message,
-              variant: "destructive"
-          });
+          toast({ title: "Error de Duplicidad", description: numberCheck.message, variant: "destructive" });
           return false;
       }
 
@@ -471,44 +358,87 @@ const BaptismCelebratedPage = () => {
 
     try {
         const baptismData = {
-            // Core Fields for Identification
+            // Metadatos
             type: 'baptism',
             parishId: user?.parishId,
             dioceseId: user?.dioceseId, 
-            
-            // Manual Numbers
-            book_number: formData.book_number,
-            page_number: formData.page_number,
-            entry_number: formData.entry_number,
+            estado: 'permanente',
+            status: 'seated',
 
-            // Core Personal Data
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            sacramentDate: formData.sacramentDate,
-            birthDate: formData.birthDate,
-            birthPlace: formData.birthPlace,
-            minister: formData.minister,
+            // 1. Numeración (Unificada)
+            libro: formData.numeroLibro,
+            book_number: formData.numeroLibro, 
+            folio: formData.folio,
+            page_number: formData.folio, 
+            numero: formData.numeroActa,
+            numeroActa: formData.numeroActa,
+            entry_number: formData.numeroActa,
+
+            // 2. Datos del Sacramento
+            fechaSacramento: formData.fechaSacramento,
+            fecbau: formData.fechaSacramento,
+            sacramentDate: formData.fechaSacramento, 
+            lugarBautismo: formData.lugarBautismoDetalle,
+            lugarBautismoDetalle: formData.lugarBautismoDetalle,
+            lugbau: formData.lugarBautismoDetalle,
+
+            // 3. Datos del Bautizado
+            nombres: formData.nombres,
+            firstName: formData.nombres, 
+            apellidos: formData.apellidos,
+            lastName: formData.apellidos, 
+            fechaNacimiento: formData.fechaNacimiento,
+            fecnac: formData.fechaNacimiento,
+            birthDate: formData.fechaNacimiento, 
+            lugarNacimiento: formData.lugarNacimientoDetalle,
+            lugarNacimientoDetalle: formData.lugarNacimientoDetalle,
+            lugnac: formData.lugarNacimientoDetalle,
+            lugarn: formData.lugarNacimientoDetalle,
+            sexo: formData.sexo,
+            sex: formData.sexo, 
+
+            // 4. Datos de los Padres
+            tipoUnionPadres: formData.tipoUnionPadres,
+            tipohijo: formData.tipoUnionPadres,
+            nombrePadre: formData.nombrePadre,
+            padre: formData.nombrePadre,
+            fatherName: formData.nombrePadre,
+            cedulaPadre: formData.cedulaPadre,
+            cedupad: formData.cedulaPadre,
+            fatherId: formData.cedulaPadre,
+            nombreMadre: formData.nombreMadre,
+            madre: formData.nombreMadre,
+            motherName: formData.nombreMadre,
+            cedulaMadre: formData.cedulaMadre,
+            cedumad: formData.cedulaMadre,
+            motherId: formData.cedulaMadre,
+
+            // 5. Abuelos y Padrinos
+            abuelosPaternos: formData.abuelosPaternos,
+            abuepat: formData.abuelosPaternos,
+            paternalGrandparents: formData.abuelosPaternos,
+            abuelosMaternos: formData.abuelosMaternos,
+            abuemat: formData.abuelosMaternos,
+            maternalGrandparents: formData.abuelosMaternos,
+            padrinos: formData.padrinos,
+            godparents: formData.padrinos, 
+
+            // 6. Ministro y Registro Legal
+            ministro: formData.ministro,
+            minister: formData.ministro,
+            daFe: formData.daFe,
+            dafe: formData.daFe,
+            ministerFaith: formData.daFe,
             
-            // Structured Relations
+            // Notas
+            notaMarginal: formData.observaciones,
+            notaAlMargen: formData.observaciones,
+            marginNote: formData.observaciones,
+            
             parents: [
-                 { name: formData.fatherName, role: 'father', idNumber: formData.fatherId },
-                 { name: formData.motherName, role: 'mother', idNumber: formData.motherId }
-            ].filter(p => p.name),
-            
-            godparents: [
-                { name: formData.godparents, role: 'godparents' }
-            ],
-            
-            // Metadata / Extended
-            metadata: {
-                place: formData.place,
-                sex: formData.sex,
-                parentsUnionType: formData.parentsUnionType,
-                paternalGrandparents: formData.paternalGrandparents,
-                maternalGrandparents: formData.maternalGrandparents,
-                observations: formData.observations,
-                ministerFaith: formData.ministerFaith // Save the manually set or active minister
-            }
+                 formData.nombrePadre ? `${formData.nombrePadre} (Padre)` : null,
+                 formData.nombreMadre ? `${formData.nombreMadre} (Madre)` : null
+            ].filter(Boolean)
         };
 
         const result = await saveBaptismToSource(baptismData, user?.parishId, 'celebrated');
@@ -516,28 +446,20 @@ const BaptismCelebratedPage = () => {
         if (result.success) {
             toast({ 
                 title: "Bautismo registrado exitosamente", 
-                description: "El registro ha sido guardado en el archivo histórico." 
+                description: "El registro ha sido guardado en el archivo histórico." ,
+                className: "bg-green-50 border-green-200 text-green-900"
             });
             navigate('/parroquia/bautismo/partidas');
         } else {
-            toast({ 
-                title: "Error al guardar", 
-                description: result.message,
-                variant: "destructive" 
-            });
+            toast({ title: "Error al guardar", description: result.message, variant: "destructive" });
         }
     } catch (error) {
-        toast({
-            title: "Error inesperado",
-            description: "Ocurrió un error al procesar la solicitud.",
-            variant: "destructive"
-        });
+        toast({ title: "Error inesperado", description: "Ocurrió un error al procesar la solicitud.", variant: "destructive" });
     } finally {
         setIsSubmitting(false);
     }
   };
 
-  // Helper for Section Headers
   const SectionHeader = ({ icon: Icon, title, number }) => (
       <div className="flex items-center gap-3 mb-6 pb-2 border-b border-gray-200 mt-8 first:mt-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#D4AF37] to-[#B4932A] text-white flex items-center justify-center text-sm font-bold shadow-sm">
@@ -574,15 +496,15 @@ const BaptismCelebratedPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 bg-gray-50 rounded-xl border border-gray-200 shadow-inner">
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Libro No. <span className="text-red-600">*</span></label>
-                        <input type="text" name="book_number" required value={formData.book_number} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 12" />
+                        <input type="text" name="numeroLibro" required value={formData.numeroLibro} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 12" />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Folio / Página <span className="text-red-600">*</span></label>
-                        <input type="text" name="page_number" required value={formData.page_number} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 45" />
+                        <input type="text" name="folio" required value={formData.folio} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 45" />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Número de Acta <span className="text-red-600">*</span></label>
-                        <input type="text" name="entry_number" required value={formData.entry_number} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 342" />
+                        <input type="text" name="numeroActa" required value={formData.numeroActa} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D4AF37] outline-none font-mono text-lg bg-white text-gray-900 font-semibold" placeholder="ej. 342" />
                     </div>
                 </div>
             </section>
@@ -593,17 +515,18 @@ const BaptismCelebratedPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Fecha del Bautismo <span className="text-red-600">*</span></label>
-                        <input type="date" name="sacramentDate" required value={formData.sacramentDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none hover:border-[#4B7BA7] transition-colors text-gray-900" />
+                        <input type="date" name="fechaSacramento" required value={formData.fechaSacramento} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none hover:border-[#4B7BA7] transition-colors text-gray-900" />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Parroquia <span className="text-red-600">*</span></label>
                         <input 
                             type="text" 
-                            name="place" 
+                            name="lugarBautismoDetalle" 
                             required 
                             readOnly
-                            value={formData.place} 
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-gray-50 text-gray-600 cursor-not-allowed font-medium" 
+                            placeholder="Parroquia no configurada"
+                            value={formData.lugarBautismoDetalle || ''} 
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-gray-50 text-gray-600 cursor-not-allowed font-medium uppercase" 
                         />
                     </div>
                 </div>
@@ -615,35 +538,34 @@ const BaptismCelebratedPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Apellidos <span className="text-red-600">*</span></label>
-                        <input type="text" name="lastName" required value={formData.lastName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-900" />
+                        <input type="text" name="apellidos" required value={formData.apellidos} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-900" />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Nombres <span className="text-red-600">*</span></label>
-                        <input type="text" name="firstName" required value={formData.firstName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-900" />
+                        <input type="text" name="nombres" required value={formData.nombres} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none uppercase font-bold text-gray-900" />
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Sexo</label>
-                        <select name="sex" value={formData.sex} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white text-gray-900">
+                        <select name="sexo" value={formData.sexo} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white text-gray-900">
                             <option value="">Seleccione...</option>
-                            <option value="M">Masculino</option>
-                            <option value="F">Femenino</option>
+                            <option value="MASCULINO">Masculino</option>
+                            <option value="FEMENINO">Femenino</option>
                         </select>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Fecha Nacimiento <span className="text-red-600">*</span></label>
-                        <input type="date" name="birthDate" required value={formData.birthDate} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" />
+                        <input type="date" name="fechaNacimiento" required value={formData.fechaNacimiento} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Lugar Nacimiento</label>
                         <input 
                             list="places-list"
                             type="text" 
-                            name="birthPlace" 
-                            value={formData.birthPlace} 
+                            name="lugarNacimientoDetalle" 
+                            value={formData.lugarNacimientoDetalle} 
                             onChange={handleCityChange} 
-                            onBlur={handleCitySelect}
                             placeholder="Seleccione o escriba..."
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
                         />
@@ -665,13 +587,13 @@ const BaptismCelebratedPage = () => {
                 <SectionHeader number="4" title="Datos de los Padres" icon={Users} />
                 <div className="mb-4">
                     <label className="block text-sm font-bold text-gray-700 mb-1">Tipo de Unión</label>
-                    <select name="parentsUnionType" value={formData.parentsUnionType} onChange={handleChange} className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white text-gray-900">
+                    <select name="tipoUnionPadres" value={formData.tipoUnionPadres} onChange={handleChange} className="w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none bg-white text-gray-900">
                         <option value="">Seleccione...</option>
-                        <option value="Matrimonio Católico">Matrimonio Católico</option>
-                        <option value="Matrimonio Civil">Matrimonio Civil</option>
-                        <option value="Unión Libre">Unión Libre</option>
-                        <option value="Madre Soltera">Madre Soltera</option>
-                        <option value="Otro">Otro</option>
+                        <option value="MATRIMONIO CATÓLICO">Matrimonio Católico</option>
+                        <option value="MATRIMONIO CIVIL">Matrimonio Civil</option>
+                        <option value="UNIÓN LIBRE">Unión Libre</option>
+                        <option value="MADRE SOLTERA">Madre Soltera</option>
+                        <option value="OTRO">Otro</option>
                     </select>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -682,11 +604,11 @@ const BaptismCelebratedPage = () => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Nombre Completo</label>
-                                <input type="text" name="fatherName" value={formData.fatherName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white text-gray-900" />
+                                <input type="text" name="nombrePadre" value={formData.nombrePadre} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white text-gray-900" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Identificación</label>
-                                <input type="text" name="fatherId" value={formData.fatherId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white text-gray-900" />
+                                <input type="text" name="cedulaPadre" value={formData.cedulaPadre} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 outline-none text-sm bg-white text-gray-900" />
                             </div>
                         </div>
                     </div>
@@ -697,11 +619,11 @@ const BaptismCelebratedPage = () => {
                         <div className="space-y-4">
                              <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Nombre Completo</label>
-                                <input type="text" name="motherName" value={formData.motherName} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-200 outline-none text-sm bg-white text-gray-900" />
+                                <input type="text" name="nombreMadre" value={formData.nombreMadre} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-200 outline-none text-sm bg-white text-gray-900" />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-600 mb-1">Identificación</label>
-                                <input type="text" name="motherId" value={formData.motherId} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-200 outline-none text-sm bg-white text-gray-900" />
+                                <input type="text" name="cedulaMadre" value={formData.cedulaMadre} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-200 outline-none text-sm bg-white text-gray-900" />
                             </div>
                         </div>
                     </div>
@@ -714,11 +636,11 @@ const BaptismCelebratedPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Abuelos Paternos</label>
-                        <textarea name="paternalGrandparents" value={formData.paternalGrandparents} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres..." />
+                        <textarea name="abuelosPaternos" value={formData.abuelosPaternos} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres..." />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Abuelos Maternos</label>
-                        <textarea name="maternalGrandparents" value={formData.maternalGrandparents} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres..." />
+                        <textarea name="abuelosMaternos" value={formData.abuelosMaternos} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres..." />
                     </div>
                 </div>
             </section>
@@ -729,7 +651,7 @@ const BaptismCelebratedPage = () => {
                     <SectionHeader number="6" title="Padrinos" icon={Users} />
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Nombres de Padrinos</label>
-                        <textarea name="godparents" value={formData.godparents} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres completos..." />
+                        <textarea name="padrinos" value={formData.padrinos} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none h-24 text-sm resize-none text-gray-900" placeholder="Nombres completos..." />
                     </div>
                 </section>
                 <section>
@@ -741,11 +663,10 @@ const BaptismCelebratedPage = () => {
                                 <input 
                                     list="ministers-list" 
                                     type="text" 
-                                    name="minister" 
+                                    name="ministro" 
                                     required 
-                                    value={formData.minister} 
+                                    value={formData.ministro} 
                                     onChange={handleMinisterChange}
-                                    onBlur={handleMinisterBlur}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
                                     placeholder="Se completa automáticamente" 
                                 />
@@ -762,10 +683,9 @@ const BaptismCelebratedPage = () => {
                                 <input 
                                     list="ministers-faith-list"
                                     type="text" 
-                                    name="ministerFaith" 
-                                    value={formData.ministerFaith} 
+                                    name="daFe" 
+                                    value={formData.daFe} 
                                     onChange={handleMinisterFaithChange}
-                                    onBlur={handleMinisterFaithSelect}
                                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" 
                                     placeholder="Seleccione o escriba..."
                                 />
@@ -775,12 +695,12 @@ const BaptismCelebratedPage = () => {
                                         return <option key={i} value={displayName} />;
                                     })}
                                 </datalist>
-                                <p className="text-xs text-gray-500 mt-1">Párroco actual activo (puede cambiar manualmente)</p>
+                                <p className="text-xs text-gray-500 mt-1">Párroco actual activo</p>
                             </div>
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-1">Observaciones / Notas Marginales</label>
-                            <input type="text" name="observations" value={formData.observations} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" />
+                            <input type="text" name="observaciones" value={formData.observaciones} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4B7BA7] outline-none text-gray-900" />
                         </div>
                     </div>
                 </section>

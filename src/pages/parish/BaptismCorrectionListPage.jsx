@@ -93,9 +93,19 @@ const BaptismCorrectionListPage = () => {
         { 
             header: 'Nueva Partida', 
             render: (row) => {
-                // For new partida, we might look at newPartidaId or baptismData (which holds the new data in decree)
-                const name = resolveBaptismName(row.newPartidaId, row.baptismData || row.newPartidaSummary);
-                return name ? name.toUpperCase() : '';
+                // Primero intentamos buscar el nombre de la nueva partida
+                let name = resolveBaptismName(row.newPartidaId, row.baptismData || row.newPartidaSummary);
+                
+                // SALVAVIDAS PARA IMPORTADOS: Si viene en blanco, heredamos el nombre de la persona afectada
+                if (!name || name.trim() === '') {
+                    name = `${row.nombres || row.firstName || ''} ${row.apellidos || row.lastName || ''}`.trim();
+                }
+                // Si aún así está vacío, probamos con el targetName
+                if (!name || name.trim() === '') {
+                    name = row.targetName || '';
+                }
+
+                return name ? name.toUpperCase() : '---';
             }
         },
         {

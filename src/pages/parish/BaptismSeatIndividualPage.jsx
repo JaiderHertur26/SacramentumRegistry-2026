@@ -31,9 +31,9 @@ const BaptismSeatIndividualPage = () => {
     // Marginal Note Logic State
     const [includeCivilRegistry, setIncludeCivilRegistry] = useState(false);
     const [civilRegistryData, setCivilRegistryData] = useState({
-        registrySerial: '',
-        registryOffice: '',
-        registryDate: ''
+        serialRegistro: '',
+        oficinaRegistro: '',
+        fechaExpedicionRegistro: ''
     });
 
     const loadData = async () => {
@@ -54,9 +54,9 @@ const BaptismSeatIndividualPage = () => {
     useEffect(() => {
         if (currentBaptism) {
             setCivilRegistryData({
-                registrySerial: currentBaptism.registrySerial || '',
-                registryOffice: currentBaptism.registryOffice || '',
-                registryDate: currentBaptism.registryDate || ''
+                serialRegistro: currentBaptism.serialRegistro || currentBaptism.registrySerial || '',
+                oficinaRegistro: currentBaptism.oficinaRegistro || currentBaptism.registryOffice || '',
+                fechaExpedicionRegistro: currentBaptism.fechaExpedicionRegistro || currentBaptism.registryDate || ''
             });
             // Reset checkbox default state if needed, or keep persistent for session
             setIncludeCivilRegistry(false); 
@@ -80,18 +80,18 @@ const BaptismSeatIndividualPage = () => {
 
         if (includeCivilRegistry) {
             // Generate auto-note
-            const { registrySerial, registryOffice, registryDate } = civilRegistryData;
+            const { serialRegistro, oficinaRegistro, fechaExpedicionRegistro } = civilRegistryData;
             
             // Format date for text
-            let formattedDate = registryDate;
+            let formattedDate = fechaExpedicionRegistro;
             try {
-                if (registryDate) formattedDate = convertDateToSpanishText(registryDate).toUpperCase();
+                if (fechaExpedicionRegistro) formattedDate = convertDateToSpanishText(fechaExpedicionRegistro).toUpperCase();
             } catch (e) {
                 console.error("Date format error", e);
             }
 
-            if (registrySerial && registryOffice) {
-                marginalNoteToAdd = `REGISTRO CIVIL SERIAL No. ${registrySerial}, EXPEDIDO POR ${registryOffice}`;
+            if (serialRegistro && oficinaRegistro) {
+                marginalNoteToAdd = `REGISTRO CIVIL SERIAL No. ${serialRegistro}, EXPEDIDO POR ${oficinaRegistro}`;
                 if (formattedDate) {
                     marginalNoteToAdd += ` DE FECHA: ${formattedDate}`;
                 }
@@ -210,9 +210,9 @@ const BaptismSeatIndividualPage = () => {
                 <div className="col-span-full mb-2">
                     <h3 className="text-sm font-bold text-[#4B7BA7] uppercase tracking-wider mb-3 border-b border-gray-100 pb-1">Datos de Registro (Asignación Automática)</h3>
                     <div className="grid grid-cols-3 gap-4 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
-                        <Field label="Libro" value={nextNumbers?.book} />
-                        <Field label="Folio" value={nextNumbers?.page} />
-                        <Field label="Número" value={nextNumbers?.entry} />
+                        <Field label="Libro" value={String(nextNumbers?.book || '1').padStart(4, '0')} />
+<Field label="Folio" value={String(nextNumbers?.page || '1').padStart(4, '0')} />
+<Field label="Número" value={String(nextNumbers?.entry || '1').padStart(4, '0')} />
                     </div>
                 </div>
 
@@ -220,13 +220,13 @@ const BaptismSeatIndividualPage = () => {
                 <div className="col-span-full md:col-span-2 lg:col-span-4">
                      <h3 className="text-sm font-bold text-[#4B7BA7] uppercase tracking-wider mb-3 border-b border-gray-100 pb-1 mt-2">Datos del Bautizado</h3>
                 </div>
-                <Field label="Apellidos" value={currentBaptism.lastName || currentBaptism.last_name} />
-                <Field label="Nombres" value={currentBaptism.firstName || currentBaptism.first_name} />
-                <Field label="Fecha Bautismo" value={currentBaptism.sacramentDate || currentBaptism.sacrament_date} />
+                <Field label="Apellidos" value={currentBaptism.apellidos || currentBaptism.lastName || currentBaptism.last_name} />
+                <Field label="Nombres" value={currentBaptism.nombres || currentBaptism.firstName || currentBaptism.first_name} />
+                <Field label="Fecha Bautismo" value={currentBaptism.fechaSacramento || currentBaptism.sacramentDate || currentBaptism.sacrament_date} />
                 <Field label="Lugar Bautismo" value={user?.parishName} />
-                <Field label="Fecha Nacimiento" value={currentBaptism.birthDate || currentBaptism.birth_date} />
-                <Field label="Lugar Nacimiento" value={currentBaptism.birthPlace || currentBaptism.birth_place} />
-                <Field label="Sexo" value={currentBaptism.gender === 'M' ? 'Masculino' : 'Femenino'} />
+                <Field label="Fecha Nacimiento" value={currentBaptism.fechaNacimiento || currentBaptism.birthDate || currentBaptism.birth_date} />
+                <Field label="Lugar Nacimiento" value={currentBaptism.lugarNacimiento || currentBaptism.birthPlace || currentBaptism.birth_place} />
+                <Field label="Sexo" value={currentBaptism.sexo === 'M' || currentBaptism.gender === 'M' ? 'Masculino' : 'Femenino'} />
                 
                 {/* Section 3: Filiación */}
                 <div className="col-span-full md:col-span-2 lg:col-span-4 mt-2">
@@ -236,19 +236,19 @@ const BaptismSeatIndividualPage = () => {
                      <Field label="Padres" value={getFormattedParents(currentBaptism.parents)} />
                 </div>
                 <div className="col-span-full md:col-span-2">
-                    <Field label="Tipo de Unión" value={currentBaptism.parents?.[0]?.civilStatus || '---'} />
+                    <Field label="Tipo de Unión" value={currentBaptism.tipoUnionPadres || currentBaptism.parents?.[0]?.civilStatus || '---'} />
                 </div>
                 <div className="col-span-full md:col-span-2">
-                    <Field label="Abuelos Paternos" value={getFormattedGrandparents(currentBaptism.parents, 'paternal')} />
+                    <Field label="Abuelos Paternos" value={currentBaptism.abuelosPaternos || getFormattedGrandparents(currentBaptism.parents, 'paternal')} />
                 </div>
                 <div className="col-span-full md:col-span-2">
-                    <Field label="Abuelos Maternos" value={getFormattedGrandparents(currentBaptism.parents, 'maternal')} />
+                    <Field label="Abuelos Maternos" value={currentBaptism.abuelosMaternos || getFormattedGrandparents(currentBaptism.parents, 'maternal')} />
                 </div>
                  <div className="col-span-full md:col-span-2">
-                    <Field label="Padrinos" value={currentBaptism.godparents?.map(g => g.name).join(', ') || '---'} />
+                    <Field label="Padrinos" value={currentBaptism.padrinos || currentBaptism.godparents?.map(g => g.name).join(', ') || '---'} />
                 </div>
                  <div className="col-span-full md:col-span-2">
-                    <Field label="Ministro" value={currentBaptism.minister || '---'} />
+                    <Field label="Ministro" value={currentBaptism.ministro || currentBaptism.minister || '---'} />
                 </div>
 
                 {/* Section 4: Datos de Registro Civil (Editable & Auto-Note Generation) */}
@@ -272,8 +272,8 @@ const BaptismSeatIndividualPage = () => {
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Serial Registro Civil</label>
                             <Input 
-                                name="registrySerial" 
-                                value={civilRegistryData.registrySerial} 
+                                name="serialRegistro" 
+                                value={civilRegistryData.serialRegistro} 
                                 onChange={handleCivilDataChange}
                                 placeholder="Ej: 54115513"
                                 className="bg-white"
@@ -282,8 +282,8 @@ const BaptismSeatIndividualPage = () => {
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Oficina Registro Civil</label>
                             <Input 
-                                name="registryOffice" 
-                                value={civilRegistryData.registryOffice} 
+                                name="oficinaRegistro" 
+                                value={civilRegistryData.oficinaRegistro} 
                                 onChange={handleCivilDataChange}
                                 placeholder="Ej: Registraduría de..."
                                 className="bg-white"
@@ -293,8 +293,8 @@ const BaptismSeatIndividualPage = () => {
                             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Fecha Expedición</label>
                             <Input 
                                 type="date"
-                                name="registryDate" 
-                                value={civilRegistryData.registryDate} 
+                                name="fechaExpedicionRegistro" 
+                                value={civilRegistryData.fechaExpedicionRegistro} 
                                 onChange={handleCivilDataChange}
                                 className="bg-white"
                             />

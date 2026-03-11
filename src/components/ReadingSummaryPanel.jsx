@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, CheckCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

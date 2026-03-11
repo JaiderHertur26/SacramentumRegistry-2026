@@ -1,4 +1,3 @@
-
 import { generateUUID } from '@/utils/supabaseHelpers';
 
 export const validateDecreeStructure = (json) => {

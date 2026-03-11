@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,64 @@ const ImportParrocosForm = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [validationResult, setValidationResult] = useState(null);
-  const [jsonContent, setJsonContent] = useState(null);
+  const [normalizedContent, setNormalizedContent] = useState(null);
+
+  // --- SEPARADOR INTELIGENTE DE NOMBRES ---
+  const splitFullName = (fullName) => {
+      if (!fullName) return { nombre: '', apellido: '' };
+      
+      const parts = fullName.trim().split(' ').filter(p => p);
+      if (parts.length === 1) return { nombre: parts[0], apellido: '' };
+
+      const titulos = ['PBRO.', 'PBRO', 'PADRE', 'FRAY', 'MONS.', 'MONS', 'OBISPO'];
+      const firstWord = parts[0].toUpperCase();
+
+      let nombreParts = [];
+      let apellidoParts = [];
+
+      // Si empieza con un título, el "Nombre" será el Título + El primer nombre real
+      if (titulos.includes(firstWord) && parts.length > 1) {
+          nombreParts = [parts[0], parts[1]];
+          apellidoParts = parts.slice(2);
+      } 
+      // Si son 2 palabras: 1 nombre, 1 apellido
+      else if (parts.length === 2) {
+          nombreParts = [parts[0]];
+          apellidoParts = [parts[1]];
+      }
+      // Si son 3 palabras: 1 nombre, 2 apellidos
+      else if (parts.length === 3) {
+          nombreParts = [parts[0]];
+          apellidoParts = [parts[1], parts[2]];
+      }
+      // Si son 4 o más palabras: 2 nombres, resto apellidos
+      else {
+          nombreParts = [parts[0], parts[1]];
+          apellidoParts = parts.slice(2);
+      }
+
+      return {
+          nombre: nombreParts.join(' '),
+          apellido: apellidoParts.join(' ')
+      };
+  };
+
+  // Normalizador: Convierte el JSON crudo al estándar de la aplicación
+  const normalizeItem = (item) => {
+      const rawName = (item.Nombre || item.nombre || '').trim();
+      const { nombre: calcNombre, apellido: calcApellido } = splitFullName(rawName);
+
+      return {
+          codigo: (item.Codigo || item.codigo || '').toString().trim(),
+          nombre: item.Nombres || item.nombres || calcNombre,
+          apellido: item.Apellidos || item.apellidos || item.apellido || calcApellido,
+          fechaIngreso: item.fechaIngreso || item.FechaIngreso || item.fecing || item.fechaNombramiento || '',
+          fechaSalida: item.fechaSalida || item.FechaSalida || item.fecsal || '',
+          estado: item.Estado !== undefined ? item.Estado : (item.estado !== undefined ? item.estado : 1),
+          email: item.Email || item.email || '',
+          telefono: item.Telefono || item.telefono || ''
+      };
+  };
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -37,72 +93,62 @@ const ImportParrocosForm = ({ isOpen, onClose }) => {
                 throw new Error(structureCheck.message);
             }
 
-            setJsonContent(json);
-            
-            // Manual Validation
-            const existingData = getParrocos(user?.parishId);
+            const existingData = getParrocos(user?.parishId) || [];
             const errors = [];
             const warnings = [];
             let validCount = 0;
+            const normalizedData = [];
 
             json.data.forEach((item, index) => {
                 const idx = index + 1;
-                const codigo = (item.Codigo || item.codigo || '').toString().trim();
-                const nombreCompleto = (item.Nombre || item.nombre || '').trim();
+                const normItem = normalizeItem(item);
                 
-                if (!codigo || !nombreCompleto) {
-                    errors.push({ index: idx, message: `Fila ${idx}: Código y Nombre son requeridos.` });
+                if (!normItem.nombre) {
+                    errors.push({ index: idx, message: `Fila ${idx}: El Nombre es requerido.` });
                     return;
                 }
 
-                const isDuplicate = existingData.some(ex => 
-                    ex.codigo === codigo ||
-                    (ex.nombreCompleto || '').toLowerCase() === nombreCompleto.toLowerCase()
-                );
+                const isDuplicate = existingData.some(ex => {
+                    const codeMatch = ex.codigo && normItem.codigo && ex.codigo === normItem.codigo;
+                    const nameMatch = (ex.nombre || '').toLowerCase() === normItem.nombre.toLowerCase() && 
+                                      (ex.apellido || '').toLowerCase() === normItem.apellido.toLowerCase();
+                    return codeMatch || nameMatch;
+                });
                 
                 if (isDuplicate) {
-                    warnings.push({ index: idx, message: `Fila ${idx}: Párroco duplicado (Código: ${codigo}, Nombre: ${nombreCompleto}).` });
+                    warnings.push({ index: idx, message: `Fila ${idx}: Párroco duplicado (${normItem.nombre} ${normItem.apellido}).` });
                 } else {
                     validCount++;
+                    normalizedData.push(normItem);
                 }
             });
 
+            setNormalizedContent(normalizedData);
             setValidationResult({ count: validCount, errors, warnings });
-            setPreview(json.data.slice(0, 5));
+            setPreview(normalizedData.slice(0, 5));
+
         } catch (err) {
             toast({ title: "Error de Validación", description: err.message, variant: "destructive" });
             setValidationResult({ count: 0, errors: [{ message: err.message }], warnings: [] });
         } finally {
             setLoading(false);
+            e.target.value = null; 
         }
     };
     reader.readAsText(selectedFile);
   };
 
   const handleConfirm = () => {
-      if (!jsonContent || !jsonContent.data) return;
+      if (!normalizedContent) return;
       
       setLoading(true);
-
-      const existingData = getParrocos(user?.parishId);
-      const originalCount = jsonContent.data.length;
-      
-      const filteredData = jsonContent.data.filter(item => {
-          const codigo = (item.Codigo || item.codigo || '').toString().trim();
-          const nombreCompleto = (item.Nombre || item.nombre || '').trim().toLowerCase();
-          
-          return !existingData.some(ex => 
-              ex.codigo === codigo ||
-              (ex.nombreCompleto || '').toLowerCase() === nombreCompleto
-          );
-      });
-
-      const duplicatesCount = originalCount - filteredData.length;
+      const duplicatesCount = validationResult?.warnings?.length || 0;
       
       let result;
-      if (filteredData.length > 0) {
-          const filteredJson = { ...jsonContent, data: filteredData };
-          result = importParrocos(filteredJson, user?.parishId, false);
+      if (normalizedContent.length > 0) {
+          const payload = { data: normalizedContent };
+          // TRUE para asegurarnos de que NO borre los antiguos
+          result = importParrocos(payload, user?.parishId, true); 
       } else {
           result = { success: true, count: 0 };
       }
@@ -130,16 +176,19 @@ const ImportParrocosForm = ({ isOpen, onClose }) => {
       setFile(null);
       setPreview(null);
       setValidationResult(null);
-      setJsonContent(null);
+      setNormalizedContent(null);
       onClose();
   };
 
   const columns = [
-      { header: 'Código', accessor: 'codigo' },
-      { header: 'Nombre', accessor: 'nombreCompleto' },
+      { header: 'Nombre', accessor: 'nombre' },
+      { header: 'Apellido', accessor: 'apellido' },
       { header: 'Fecha Ingreso', accessor: 'fechaIngreso' },
       { header: 'Fecha Salida', accessor: 'fechaSalida' },
-      { header: 'Estado', accessor: 'estado' },
+      { 
+          header: 'Estado', 
+          render: (row) => String(row.estado) === '1' ? 'ACTIVO' : 'INACTIVO' 
+      },
   ];
 
   return (
@@ -181,7 +230,7 @@ const ImportParrocosForm = ({ isOpen, onClose }) => {
                     {preview && preview.length > 0 && (
                         <div className="border border-gray-200 rounded-lg overflow-hidden">
                             <div className="bg-gray-100 px-4 py-2 text-xs font-bold text-gray-900 border-b border-gray-200">
-                                VISTA PREVIA (Primeros 5)
+                                VISTA PREVIA (Primeros 5 a importar)
                             </div>
                             <Table columns={columns} data={preview} />
                         </div>
@@ -221,7 +270,7 @@ const ImportParrocosForm = ({ isOpen, onClose }) => {
                 </Button>
                 <Button 
                     onClick={handleConfirm} 
-                    disabled={!validationResult || validationResult.errors?.length > 0}
+                    disabled={!validationResult || validationResult.errors?.length > 0 || normalizedContent?.length === 0}
                     className="bg-[#D4AF37] hover:bg-[#C4A027] text-white disabled:bg-gray-300"
                 >
                     <CheckCircle2 className="w-4 h-4 mr-2" /> Confirmar Importación

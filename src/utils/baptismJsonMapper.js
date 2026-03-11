@@ -1,17 +1,17 @@
-
 import { generateUUID } from './supabaseHelpers';
 
 /**
  * Maps a raw legacy JSON record to the internal Baptism structure.
  */
 export const mapBaptismJSON = (rawData) => {
-    // Helper to format date if needed (DD/MM/YYYY to YYYY-MM-DD or keep as is if compatible)
+    // Helper to format date if needed
     const formatDate = (d) => d || '';
 
     const mapSex = (s) => {
-        if (String(s) === '1') return 'MASCULINO';
-        if (String(s) === '2') return 'FEMENINO';
-        return String(s) || 'NO ESPECIFICADO';
+        const str = String(s).toUpperCase().trim();
+        if (str === '1' || str === 'M' || str.includes('MASC')) return 'MASCULINO';
+        if (str === '2' || str === 'F' || str.includes('FEM')) return 'FEMENINO';
+        return str || 'NO ESPECIFICADO';
     };
 
     return {
@@ -19,56 +19,56 @@ export const mapBaptismJSON = (rawData) => {
         status: 'confirmed', 
         
         // Registry Info
-        book_number: String(rawData.libro || ''),
-        page_number: String(rawData.folio || ''),
-        entry_number: String(rawData.numero || ''),
+        book_number: String(rawData.libro || rawData.book_number || ''),
+        page_number: String(rawData.folio || rawData.page_number || ''),
+        entry_number: String(rawData.numero || rawData.entry_number || ''),
         
         // Sacrament Data
-        sacramentDate: formatDate(rawData.fecbau),
-        sacramentPlace: rawData.lugarBautismoDetalle || rawData.lugbau || '', // Mapped to detail/lugbau
-        lugarBautismo: rawData.lugbau || '', // Explicit mapping
-        lugarBautismoDetalle: rawData.lugbau || '',
+        sacramentDate: formatDate(rawData.fechaSacramento || rawData.fecbau),
+        sacramentPlace: rawData.lugarBautismoDetalle || rawData.lugarBautismo || rawData.lugbau || '',
+        lugarBautismo: rawData.lugarBautismo || rawData.lugbau || '',
+        lugarBautismoDetalle: rawData.lugarBautismoDetalle || rawData.lugarBautismo || rawData.lugbau || '',
         
         // Person Data
-        firstName: rawData.nombres || '',
-        lastName: rawData.apellidos || '',
-        birthDate: formatDate(rawData.fecnac),
-        birthPlace: rawData.lugarn || rawData.lugnac || '', // lugarn takes precedence
-        lugarNacimientoDetalle: rawData.lugarn || '',
-        sex: mapSex(rawData.sexo),
+        firstName: rawData.nombres || rawData.firstName || '',
+        lastName: rawData.apellidos || rawData.lastName || '',
+        birthDate: formatDate(rawData.fechaNacimiento || rawData.fecnac),
+        birthPlace: rawData.lugarNacimiento || rawData.lugarn || rawData.lugnac || '',
+        lugarNacimientoDetalle: rawData.lugarNacimientoDetalle || rawData.lugarNacimiento || rawData.lugarn || '',
+        sex: mapSex(rawData.sexo || rawData.sex),
         
         // Parents & Union
-        fatherName: rawData.padre || '',
-        fatherId: rawData.cedupad || '', // New
-        motherName: rawData.madre || '',
-        motherId: rawData.cedumad || '', // New
-        tipoUnionPadres: rawData.tipohijo || '', // Existing tipohijo
-        parentsUnionType: rawData.tipohijo || '', // Aliased
+        fatherName: rawData.nombrePadre || rawData.padre || '',
+        fatherId: rawData.cedulaPadre || rawData.cedupad || '',
+        motherName: rawData.nombreMadre || rawData.madre || '',
+        motherId: rawData.cedulaMadre || rawData.cedumad || '',
+        tipoUnionPadres: rawData.tipoUnionPadres || rawData.tipohijo || '',
+        parentsUnionType: rawData.tipoUnionPadres || rawData.tipohijo || '',
         
         // Grandparents
-        paternalGrandparents: rawData.abuepat || rawData.abupa || '', // Mapped abuepat
-        maternalGrandparents: rawData.abuemat || rawData.abuemat || rawData.abuma || '', // Mapped abuemat
+        paternalGrandparents: rawData.abuelosPaternos || rawData.abuepat || rawData.abupa || '',
+        maternalGrandparents: rawData.abuelosMaternos || rawData.abuemat || rawData.abuma || '',
         
         // Godparents
-        godfather: rawData.padri || '', // Legacy
-        godmother: rawData.madri || '', // Legacy
-        godparents: rawData.padrinos || ((rawData.padri || '') + (rawData.madri ? ' y ' + rawData.madri : '')).trim() || '', // New field padrinos
+        godfather: rawData.padri || '', 
+        godmother: rawData.madri || '', 
+        godparents: rawData.padrinos || rawData.godparents || ((rawData.padri || '') + (rawData.madri ? ' y ' + rawData.madri : '')).trim() || '',
         
         // Minister
-        minister: rawData.ministro || '',
-        ministerFaith: rawData.dafe || '',
+        minister: rawData.ministro || rawData.minister || '',
+        ministerFaith: rawData.daFe || rawData.dafe || rawData.ministerFaith || '',
         
-        // Civil Registry (New fields)
-        registrySerial: rawData.regciv || '',
+        // Civil Registry
+        registrySerial: rawData.serialRegistro || rawData.regciv || '',
         nuip: rawData.nuip || '',
-        registryOffice: rawData.notaria || '',
-        registryDate: rawData.fecregis || '',
+        registryOffice: rawData.oficinaRegistro || rawData.notaria || '',
+        registryDate: rawData.fechaExpedicionRegistro || rawData.fecregis || '',
 
         // Notes & Meta
-        notes: rawData.nota || '',
-        notaMarginal: rawData.nota || '',
+        notes: rawData.notaMarginal || rawData.nota || '',
+        notaMarginal: rawData.notaMarginal || rawData.nota || '',
         importedAt: new Date().toISOString(),
-        isAnulado: rawData.anulado === true || rawData.anulado === '1',
+        isAnulado: rawData.anulado === true || rawData.anulado === '1' || rawData.estado === 'anulada',
         lastUpdated: rawData.actualizad || new Date().toISOString(),
         
         // Other legacy fields
@@ -104,35 +104,15 @@ export const validateBaptismStructure = (jsonData) => {
 export const validateBaptismData = (record) => {
     const errors = [];
     
-    // Required Identity
-    if (!record.libro) errors.push('Falta Libro');
-    if (!record.folio) errors.push('Falta Folio');
-    if (!record.numero) errors.push('Falta Número');
-    if (!record.nombres) errors.push('Faltan Nombres');
-    if (!record.apellidos) errors.push('Faltan Apellidos');
+    // Required Identity (acepta tanto el formato nuevo como el viejo)
+    if (!record.libro && !record.book_number) errors.push('Falta Libro');
+    if (!record.folio && !record.page_number) errors.push('Falta Folio');
+    if (!record.numero && !record.entry_number) errors.push('Falta Número');
+    if (!record.nombres && !record.firstName) errors.push('Faltan Nombres');
+    if (!record.apellidos && !record.lastName) errors.push('Faltan Apellidos');
 
-    // Date Format Validation (YYYY-MM-DD or DD/MM/YYYY)
-    const dateRegex = /^(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})$/;
-    
-    if (record.fecbau && !String(record.fecbau).match(dateRegex)) {
-        errors.push(`Formato fecha bautismo inválido (${record.fecbau})`);
-    }
-    if (record.fecnac && !String(record.fecnac).match(dateRegex)) {
-        errors.push(`Formato fecha nacimiento inválido (${record.fecnac})`);
-    }
-    if (record.fecregis && !String(record.fecregis).match(dateRegex)) {
-        errors.push(`Formato fecha registro civil inválido (${record.fecregis})`);
-    }
-
-    // Number Validations
-    if (record.sexo && !['1', '2', '3', '4', '5'].includes(String(record.sexo))) {
-        errors.push('Sexo debe ser 1-5');
-    }
-    
-    if (record.tipohijo && !['1', '2', '3'].includes(String(record.tipohijo))) {
-        // Strict validation requested 1-3, though sometimes 1-5 is used. Sticking to request.
-        errors.push('Tipo Hijo debe ser 1-3');
-    }
+    // NOTA: Se ha eliminado la validación estricta de números (1-5) para "sexo" y "tipohijo"
+    // para permitir la importación de textos descriptivos ("MASCULINO", "MATRIMONIO CATÓLICO", etc.)
 
     return {
         isValid: errors.length === 0,
@@ -153,16 +133,16 @@ export const detectDuplicateBaptisms = (importedRecords, existingRecords) => {
     const duplicateRecords = [];
 
     const existingKeys = new Set(existingRecords.map(r => {
-        const b = String(r.book_number || '').trim().toLowerCase();
-        const p = String(r.page_number || '').trim().toLowerCase();
-        const e = String(r.entry_number || '').trim().toLowerCase();
+        const b = String(r.book_number || r.libro || '').trim().toLowerCase();
+        const p = String(r.page_number || r.folio || '').trim().toLowerCase();
+        const e = String(r.entry_number || r.numero || '').trim().toLowerCase();
         return `${b}-${p}-${e}`;
     }));
 
     importedRecords.forEach(record => {
-        const b = String(record.book_number || '').trim().toLowerCase();
-        const p = String(record.page_number || '').trim().toLowerCase();
-        const e = String(record.entry_number || '').trim().toLowerCase();
+        const b = String(record.book_number || record.libro || '').trim().toLowerCase();
+        const p = String(record.page_number || record.folio || '').trim().toLowerCase();
+        const e = String(record.entry_number || record.numero || '').trim().toLowerCase();
         const key = `${b}-${p}-${e}`;
 
         if (existingKeys.has(key)) {

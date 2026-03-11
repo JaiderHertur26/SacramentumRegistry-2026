@@ -65,27 +65,27 @@ const BaptismTicket = ({ baptismData, parishInfo }) => {
         <Header title="BOLETA PARA ARCHIVO PARROQUIAL" />
 
         <div className="grid grid-cols-2 gap-4 mb-2 mt-1">
-            <Section title="Fecha Bautismo" content={formatDate(baptismData.sacramentDate)} />
-            <Section title="Ministro" content={baptismData.minister} />
+            <Section title="Fecha Bautismo" content={formatDate(baptismData.fechaSacramento)} />
+            <Section title="Ministro" content={baptismData.ministro} />
         </div>
 
         <div className="space-y-0.5 mb-2 border-t border-gray-100 pt-1">
             <h4 className="text-[9px] font-bold uppercase bg-gray-50 px-1 py-0.5 mb-0.5 text-center border border-gray-200">Datos del Bautizado</h4>
             <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-                <Section title="Apellidos" content={baptismData.lastName} />
-                <Section title="Nombres" content={baptismData.firstName} />
-                <Section title="Fecha Nac." content={formatDate(baptismData.birthDate)} />
-                <Section title="Lugar Nac." content={baptismData.birthPlace} />
-                <Section title="Sexo" content={baptismData.sex === 'M' ? 'Masculino' : baptismData.sex === 'F' ? 'Femenino' : baptismData.sex} />
-                <Section title="NUIP / NUIT" content={baptismData.nuip || baptismData.registrySerial} />
+                <Section title="Apellidos" content={baptismData.apellidos} />
+                <Section title="Nombres" content={baptismData.nombres} />
+                <Section title="Fecha Nac." content={formatDate(baptismData.fechaNacimiento)} />
+                <Section title="Lugar Nac." content={baptismData.lugarNacimiento} />
+                <Section title="Sexo" content={baptismData.sexo === 'M' ? 'MASCULINO' : baptismData.sexo === 'F' ? 'FEMENINO' : baptismData.sexo} />
+                <Section title="NUIP / NUIT" content={baptismData.nuip || baptismData.serialRegistro} />
             </div>
         </div>
 
         <div className="space-y-0.5 mb-2">
             <h4 className="text-[9px] font-bold uppercase bg-gray-50 px-1 py-0.5 mb-0.5 text-center border border-gray-200">Padres</h4>
-            <Section title="Padre" content={baptismData.fatherName} />
-            <Section title="Madre" content={baptismData.motherName} />
-            <Section title="Tipo de Unión" content={baptismData.parentsUnionType} />
+            <Section title="Padre" content={baptismData.nombrePadre} />
+            <Section title="Madre" content={baptismData.nombreMadre} />
+            <Section title="Tipo de Unión" content={baptismData.tipoUnionPadres} />
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-1">
@@ -94,18 +94,18 @@ const BaptismTicket = ({ baptismData, parishInfo }) => {
                  <div className="text-[9px] space-y-1">
                     <div className="flex">
                         <span className="font-bold w-14">Paternos:</span>
-                        <span className="border-b border-gray-300 flex-1 leading-tight">{formatList(baptismData.paternalGrandparents)}</span>
+                        <span className="border-b border-gray-300 flex-1 leading-tight">{formatList(baptismData.abuelosPaternos)}</span>
                     </div>
                     <div className="flex">
                         <span className="font-bold w-14">Maternos:</span>
-                        <span className="border-b border-gray-300 flex-1 leading-tight">{formatList(baptismData.maternalGrandparents)}</span>
+                        <span className="border-b border-gray-300 flex-1 leading-tight">{formatList(baptismData.abuelosMaternos)}</span>
                     </div>
                  </div>
             </div>
             <div>
                  <h4 className="text-[9px] font-bold uppercase bg-gray-50 px-1 py-0.5 mb-0.5 text-center border border-gray-200">Padrinos</h4>
                  <div className="text-[9px] border-b border-gray-300 min-h-[2.5em] p-0.5 leading-tight">
-                    {formatList(baptismData.godparents)}
+                    {formatList(baptismData.padrinos)}
                  </div>
             </div>
         </div>
@@ -142,24 +142,24 @@ const BaptismTicket = ({ baptismData, parishInfo }) => {
             </div>
             <div className="flex gap-2 text-[10px]">
                 <span className="font-bold">Fecha Inscripción:</span>
-                <span>{formatDate(baptismData.inscriptionDate || baptismData.createdAt)}</span>
+                <span>{formatDate(baptismData.fechaInscripcion || baptismData.createdAt)}</span>
             </div>
         </div>
 
         <div className="flex-grow space-y-1">
             <div className="text-center mb-3">
                 <p className="text-[10px] italic mb-0.5">Certificamos que se ha inscrito el bautismo de:</p>
-                <p className="text-base font-bold uppercase border-b border-black inline-block px-4">{baptismData.firstName} {baptismData.lastName}</p>
+                <p className="text-base font-bold uppercase border-b border-black inline-block px-4">{baptismData.nombres} {baptismData.apellidos}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-4 text-[10px]">
                  <div className="flex gap-1 items-baseline">
                     <span className="font-bold whitespace-nowrap">Nacido el:</span>
-                    <span className="border-b border-gray-300 flex-1 pl-1">{formatDate(baptismData.birthDate)}</span>
+                    <span className="border-b border-gray-300 flex-1 pl-1">{formatDate(baptismData.fechaNacimiento)}</span>
                  </div>
                  <div className="flex gap-1 items-baseline">
                     <span className="font-bold whitespace-nowrap">En:</span>
-                    <span className="border-b border-gray-300 flex-1 pl-1 truncate">{baptismData.birthPlace}</span>
+                    <span className="border-b border-gray-300 flex-1 pl-1 truncate">{baptismData.lugarNacimiento}</span>
                  </div>
             </div>
 
@@ -168,28 +168,28 @@ const BaptismTicket = ({ baptismData, parishInfo }) => {
                     <span className="font-bold block mb-0.5 bg-gray-50 text-center text-[9px] uppercase border border-gray-200">Padres</span>
                     <div className="flex gap-1 mb-1">
                         <span className="font-bold w-10 text-[9px]">Padre:</span>
-                        <p className="border-b border-gray-300 flex-1 leading-none">{baptismData.fatherName}</p>
+                        <p className="border-b border-gray-300 flex-1 leading-none">{baptismData.nombrePadre}</p>
                     </div>
                     <div className="flex gap-1">
                          <span className="font-bold w-10 text-[9px]">Madre:</span>
-                        <p className="border-b border-gray-300 flex-1 leading-none">{baptismData.motherName}</p>
+                        <p className="border-b border-gray-300 flex-1 leading-none">{baptismData.nombreMadre}</p>
                     </div>
                 </div>
                  <div>
                     <span className="font-bold block mb-0.5 bg-gray-50 text-center text-[9px] uppercase border border-gray-200">Padrinos</span>
-                    <p className="border-b border-gray-300 h-8 overflow-hidden text-[9px] leading-tight">{formatList(baptismData.godparents)}</p>
+                    <p className="border-b border-gray-300 h-8 overflow-hidden text-[9px] leading-tight">{formatList(baptismData.padrinos)}</p>
                 </div>
             </div>
 
              <div className="mt-2 text-[10px] flex gap-2">
                 <span className="font-bold">Ministro:</span>
-                <span className="border-b border-gray-300 flex-1">{baptismData.minister}</span>
+                <span className="border-b border-gray-300 flex-1">{baptismData.ministro}</span>
             </div>
             
             <div className="grid grid-cols-2 gap-4 mt-1">
                 <div className="text-[9px] flex gap-1">
                     <span className="font-bold">Registro Civil:</span>
-                    <span className="border-b border-gray-300 flex-1">{baptismData.registryEntity || '_______'}</span>
+                    <span className="border-b border-gray-300 flex-1">{baptismData.oficinaRegistro || '_______'}</span>
                 </div>
                  <div className="text-[9px] flex gap-1">
                     <span className="font-bold">NUIP:</span>

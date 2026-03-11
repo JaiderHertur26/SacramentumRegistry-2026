@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useAppData } from '@/context/AppDataContext';
@@ -40,6 +40,25 @@ const DioceseEcclesiasticalPage = () => {
   });
   
   const [selectedItem, setSelectedItem] = useState(null);
+  
+  // Cancillería State
+  const [chancellor, setChancellor] = useState(null);
+  const [loadingChancellor, setLoadingChancellor] = useState(true);
+
+  useEffect(() => {
+      if (!user?.dioceseId || !data) {
+          setLoadingChancellor(false);
+          return;
+      }
+      
+      // Look for existing Chancery/Chancellor for this diocese
+      // It might be in chancellors or chancelleries depending on how it was created
+      const foundChancellor = (data.chancellors || []).find(c => c.dioceseId === user.dioceseId);
+      const foundChancery = (data.chancelleries || []).find(c => c.dioceseId === user.dioceseId);
+      
+      setChancellor(foundChancellor || foundChancery || null);
+      setLoadingChancellor(false);
+  }, [user?.dioceseId, data]);
 
   if (loading) {
     return (
@@ -76,7 +95,6 @@ const DioceseEcclesiasticalPage = () => {
   const getParishesByDecanate = (decanateId) => (data?.parishes || []).filter(p => p.decanateId === decanateId);
   const getDirectParishes = (vicaryId) => (data?.parishes || []).filter(p => p.vicaryId === vicaryId && (!p.decanateId || p.decanateId === 'null'));
 
-  const chancellor = (data?.chancelleries || []).find(c => c.dioceseId === user.dioceseId);
 
   const handleDeleteParish = (id) => {
     if (confirm('¿Estás seguro de eliminar esta parroquia? Se eliminará también el usuario asociado.')) {
@@ -267,22 +285,47 @@ const DioceseEcclesiasticalPage = () => {
                     <User className="w-5 h-5" /> Cancillería
                 </h3>
                 
-                {chancellor ? (
-                    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div>
-                            <h4 className="font-medium text-[#111111]">{chancellor.name}</h4>
-                            <p className="text-sm text-gray-600">Canciller Diocesano</p>
+                {loadingChancellor ? (
+                    <div className="py-4 text-center text-gray-500">Cargando datos de cancillería...</div>
+                ) : chancellor ? (
+                    <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 className="font-bold text-[#111111] text-lg">{chancellor.name}</h4>
+                                <p className="text-sm text-gray-600 font-medium">Canciller Diocesano</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button size="sm" variant="ghost" onClick={() => openModal('editChancellor', chancellor)} className="hover:bg-blue-100 text-blue-700" title="Editar Cancillería">
+                                    <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => handleDeleteChancellor(chancellor.id)} className="hover:bg-red-100 text-red-700" title="Eliminar Cancillería">
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => openModal('editChancellor', chancellor)}><Edit className="w-4 h-4 text-blue-700" /></Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteChancellor(chancellor.id)}><Trash2 className="w-4 h-4 text-red-700" /></Button>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-4 pt-4 border-t border-gray-200">
+                            <div>
+                                <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Teléfono</span>
+                                <span className="text-gray-900">{chancellor.phone || 'No registrado'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email de Contacto</span>
+                                <span className="text-gray-900">{chancellor.email || chancellor.contactEmail || 'No registrado'}</span>
+                            </div>
+                            <div className="md:col-span-2">
+                                <span className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Sede / Dirección</span>
+                                <span className="text-gray-900">{chancellor.address || 'No registrada'}</span>
+                            </div>
                         </div>
                     </div>
                 ) : (
                     <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-dashed border-gray-300">
                         No se ha registrado un canciller para esta diócesis.
-                        <div className="mt-2">
-                            <Button variant="link" onClick={() => openModal('createChancellor')} className="text-blue-700 font-medium">Registrar ahora</Button>
+                        <div className="mt-3">
+                            <Button variant="outline" onClick={() => openModal('createChancellor')} className="text-blue-700 font-medium border-blue-200 hover:bg-blue-50">
+                                <Plus className="w-4 h-4 mr-2" /> Registrar Cancillería Ahora
+                            </Button>
                         </div>
                     </div>
                 )}
